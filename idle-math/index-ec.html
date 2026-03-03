@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Economic Clicker + Stock Market</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f1f8e9;
+      color: #2e7d32;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5em;
+    }
+
+    button {
+      font-size: 1em;
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background-color: #43a047;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background-color: #388e3c;
+    }
+
+    .upgrade {
+      background-color: #1e88e5;
+    }
+
+    .upgrade:hover {
+      background-color: #1565c0;
+    }
+
+    input {
+      padding: 6px;
+      font-size: 1em;
+    }
+
+    #money {
+      font-size: 1.5em;
+      margin: 20px;
+    }
+
+    .section {
+      margin-top: 30px;
+      padding: 10px;
+      border-top: 2px solid #ccc;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    th,
+    td {
+      padding: 5px;
+    }
+
+    #status {
+      color: #555;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>💼 Economic Clicker + 💹 Stocks</h1>
+  <div id="money">Money: $0</div>
+  <button onclick="earnMoney()">💰 Work (+$1)</button>
+
+  <div class="section">
+    <h2>📈 Upgrades</h2>
+    <button class="upgrade"
+            onclick="buyInvestor()">Investor (+$1/s) [Cost: $<span id="investorCost">10</span>]</button>
+    <button class="upgrade"
+            onclick="buyFactory()">Factory (x2) [Cost: $<span id="factoryCost">25</span>]</button>
+    <button class="upgrade"
+            onclick="buyBot()">Bot (auto quiz) [Cost: $<span id="botCost">50</span>]</button>
+  </div>
+
+  <div class="section">
+    <h2>🎓 Economics Quiz</h2>
+    <div>Q: <span id="question"></span></div>
+    <input id="answer"
+           type="text"
+           placeholder="Your Answer"
+           onkeydown="checkEnter(event)">
+    <button onclick="checkAnswer()">Submit</button>
+  </div>
+
+  <div class="section">
+    <h2>💹 Stock Market</h2>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Stock</th>
+          <th>Price</th>
+          <th>Owned</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="stocksTable"></tbody>
+    </table>
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    let money = 0;
+    let displayMoney = 0;
+
+    let investors = 0, factories = 1, bots = 0;
+    let investorCost = 10, factoryCost = 25, botCost = 50;
+
+    const bonus = 10;
+    const stocks = {
+      "ACME": { price: 10, owned: 0 },
+      "BIZCO": { price: 20, owned: 0 },
+      "MEGACORP": { price: 50, owned: 0 }
+    };
+
+    function playTone(freq, duration = 0.1, type = 'square', vol = 0.2) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = vol;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    }
+
+    function earnMoney() {
+      money += 1 * factories;
+      playTone(440, 0.05, 'square', 0.1);
+    }
+
+    function buyInvestor() {
+      if (money >= investorCost) {
+        money -= investorCost;
+        investors++;
+        investorCost = Math.floor(investorCost * 1.5);
+        updateStatus("✅ Investor Hired");
+      } else {
+        updateStatus("❌ Not enough money.");
+      }
+    }
+
+    function buyFactory() {
+      if (money >= factoryCost) {
+        money -= factoryCost;
+        factories *= 2;
+        factoryCost = Math.floor(factoryCost * 2);
+        updateStatus("🏭 Factory built");
+      } else {
+        updateStatus("❌ Not enough money.");
+      }
+    }
+
+    function buyBot() {
+      if (money >= botCost) {
+        money -= botCost;
+        bots++;
+        botCost = Math.floor(botCost * 2);
+        updateStatus("🤖 Bot activated");
+      } else {
+        updateStatus("❌ Not enough money.");
+      }
+    }
+
+    function updateUI() {
+      document.getElementById("money").innerText = `Money: $${Math.floor(displayMoney)}`;
+      document.getElementById("investorCost").innerText = investorCost;
+      document.getElementById("factoryCost").innerText = factoryCost;
+      document.getElementById("botCost").innerText = botCost;
+    }
+
+    function updateStatus(msg) {
+      document.getElementById("status").innerText = msg;
+    }
+
+    function generateQuiz() {
+      const list = [
+        { q: "What is GDP short for?", a: "gross domestic product" },
+        { q: "What is inflation?", a: "rising prices" },
+        { q: "What does a stock represent?", a: "ownership" },
+        { q: "Currency used in USA?", a: "dollar" },
+        { q: "What does central bank control?", a: "interest rates" },
+      ];
+      quiz = list[Math.floor(Math.random() * list.length)];
+      document.getElementById("question").innerText = quiz.q;
+    }
+
+    function checkAnswer() {
+      const ans = document.getElementById("answer").value.trim().toLowerCase();
+      if (ans === quiz.a.toLowerCase()) {
+        money += bonus;
+        updateStatus(`🎉 Correct! +$${bonus}`);
+        playTone(880, 0.1, 'sine');
+        generateQuiz();
+        document.getElementById("answer").value = "";
+      } else {
+        updateStatus("❌ Wrong answer.");
+        playTone(120, 0.1, 'sawtooth');
+      }
+    }
+
+    function checkEnter(e) {
+      if (e.key === "Enter") checkAnswer();
+    }
+
+    function autoIncome() {
+      money += investors * factories;
+    }
+
+    function botIncome() {
+      if (bots > 0) {
+        const bonusMoney = bots * bonus * factories;
+        money += bonusMoney;
+        updateStatus(`🤖 Bots earned $${bonusMoney}`);
+      }
+    }
+
+    function smoothDisplay() {
+      displayMoney += (money - displayMoney) * 0.2;
+      updateUI();
+      requestAnimationFrame(smoothDisplay);
+    }
+
+    function updateStocks() {
+      const tbody = document.getElementById("stocksTable");
+      tbody.innerHTML = '';
+      for (const name in stocks) {
+        const stock = stocks[name];
+        const row = document.createElement("tr");
+
+        const nameCell = document.createElement("td");
+        nameCell.textContent = name;
+
+        const priceCell = document.createElement("td");
+        priceCell.textContent = "$" + stock.price;
+
+        const ownedCell = document.createElement("td");
+        ownedCell.textContent = stock.owned;
+
+        const actionCell = document.createElement("td");
+        const buyBtn = document.createElement("button");
+        buyBtn.textContent = "Buy";
+        buyBtn.onclick = () => buyStock(name);
+        const sellBtn = document.createElement("button");
+        sellBtn.textContent = "Sell";
+        sellBtn.onclick = () => sellStock(name);
+
+        actionCell.appendChild(buyBtn);
+        actionCell.appendChild(sellBtn);
+
+        row.appendChild(nameCell);
+        row.appendChild(priceCell);
+        row.appendChild(ownedCell);
+        row.appendChild(actionCell);
+        tbody.appendChild(row);
+      }
+    }
+
+    function fluctuateStocks() {
+      for (const name in stocks) {
+        const stock = stocks[name];
+        const change = (Math.random() * 4 - 2).toFixed(2); // ±2 range
+        stock.price = Math.max(1, (stock.price + parseFloat(change)).toFixed(2));
+      }
+      updateStocks();
+    }
+
+    function buyStock(name) {
+      const stock = stocks[name];
+      const price = parseFloat(stock.price);
+      if (money >= price) {
+        money -= price;
+        stock.owned++;
+        updateStatus(`📈 Bought 1 share of ${name}`);
+      } else {
+        updateStatus("❌ Not enough money.");
+      }
+    }
+
+    function sellStock(name) {
+      const stock = stocks[name];
+      const price = parseFloat(stock.price);
+      if (stock.owned > 0) {
+        stock.owned--;
+        money += price;
+        updateStatus(`💵 Sold 1 share of ${name}`);
+      } else {
+        updateStatus("❌ No shares to sell.");
+      }
+    }
+
+    // INIT
+    let quiz = {};
+    generateQuiz();
+    updateStocks();
+
+    setInterval(autoIncome, 1000);
+    setInterval(botIncome, 10000);
+    setInterval(fluctuateStocks, 5000);
+    smoothDisplay();
+  </script>
+</body>
+
+</html>

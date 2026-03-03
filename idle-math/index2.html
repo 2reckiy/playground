@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+  <title>Math Incremental</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f8ff;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+    }
+
+    #gameContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #clickerSection,
+    #upgradesSection,
+    #prestigeSection {
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    #mathProblemContainer {
+      font-size: 24px;
+      margin: 20px 0;
+      padding: 15px;
+      background-color: #eaf2f8;
+      border-radius: 8px;
+    }
+
+    #answerInput {
+      font-size: 20px;
+      padding: 8px;
+      width: 80px;
+      text-align: center;
+      border: 2px solid #3498db;
+      border-radius: 5px;
+    }
+
+    #submitAnswer {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-left: 10px;
+      transition: background-color 0.2s;
+    }
+
+    #submitAnswer:hover {
+      background-color: #2980b9;
+    }
+
+    #feedback {
+      min-height: 24px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .correct {
+      color: #27ae60;
+    }
+
+    .incorrect {
+      color: #e74c3c;
+    }
+
+    #pointsDisplay {
+      font-size: 28px;
+      font-weight: bold;
+      color: #27ae60;
+    }
+
+    .upgrade {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      margin: 10px 0;
+      background-color: #e8f4f8;
+      border-radius: 8px;
+      transition: background-color 0.2s;
+    }
+
+    .upgrade:hover {
+      background-color: #d0e3f0;
+    }
+
+    .upgrade button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .upgrade button:hover {
+      background-color: #2980b9;
+    }
+
+    .upgrade button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+
+    #prestigeButton {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 10px;
+    }
+
+    #prestigeButton:hover {
+      background-color: #c0392b;
+    }
+
+    .resourceDisplay {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+
+    .resource {
+      font-size: 18px;
+    }
+
+    .resourceValue {
+      font-weight: bold;
+      color: #3498db;
+    }
+
+    #prestigeInfo {
+      margin-top: 15px;
+      font-style: italic;
+      color: #7f8c8d;
+    }
+
+    #statsSection {
+      background-color: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+    }
+
+    .tab {
+      display: inline-block;
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #ecf0f1;
+      border-radius: 5px 5px 0 0;
+      margin-right: 5px;
+    }
+
+    .tab.active {
+      background-color: #3498db;
+      color: white;
+    }
+
+    .tabContent {
+      display: none;
+    }
+
+    .tabContent.active {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Math Incremental</h1>
+
+  <div class="resourceDisplay">
+    <div class="resource">Points: <span id="pointsDisplay"
+            class="resourceValue">0</span></div>
+    <div class="resource">Prestige: <span id="prestigeDisplay"
+            class="resourceValue">0</span></div>
+    <div class="resource">Multiplier: <span id="multiplierDisplay"
+            class="resourceValue">1x</span></div>
+  </div>
+
+  <div id="gameContainer">
+    <div id="clickerSection">
+      <h2>Solve Problems</h2>
+      <p>Solve the math problem to earn points!</p>
+      <div id="mathProblemContainer">
+        <span id="mathProblem">2 + 2 = </span>
+        <input type="number"
+               id="answerInput">
+        <button id="submitAnswer">Submit</button>
+        <div id="feedback"></div>
+      </div>
+      <p>Points per correct answer: <span id="clickValue">1</span></p>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active"
+           onclick="switchTab('upgrades')">Upgrades</div>
+      <div class="tab"
+           onclick="switchTab('prestige')">Prestige</div>
+      <div class="tab"
+           onclick="switchTab('stats')">Stats</div>
+    </div>
+
+    <div id="upgradesSection"
+         class="tabContent active">
+      <h2>Auto-Solvers</h2>
+      <p>These will automatically solve problems for you!</p>
+
+      <div class="upgrade">
+        <div>
+          <h3>Calculator</h3>
+          <p>Produces <span class="upgradeValue">0.1</span> points per second</p>
+          <p>Owned: <span class="ownedCount">0</span></p>
+        </div>
+        <button onclick="buyUpgrade('calculator')"
+                id="calculatorCost">Cost: 10 points</button>
+      </div>
+
+      <div class="upgrade">
+        <div>
+          <h3>Math Student</h3>
+          <p>Produces <span class="upgradeValue">1</span> points per second</p>
+          <p>Owned: <span class="ownedCount">0</span></p>
+        </div>
+        <button onclick="buyUpgrade('student')"
+                id="studentCost">Cost: 100 points</button>
+      </div>
+
+      <div class="upgrade">
+        <div>
+          <h3>Professor</h3>
+          <p>Produces <span class="upgradeValue">5</span> points per second</p>
+          <p>Owned: <span class="ownedCount">0</span></p>
+        </div>
+        <button onclick="buyUpgrade('professor')"
+                id="professorCost">Cost: 1000 points</button>
+      </div>
+
+      <div class="upgrade">
+        <div>
+          <h3>Math AI</h3>
+          <p>Produces <span class="upgradeValue">10</span> points per second</p>
+          <p>Owned: <span class="ownedCount">0</span></p>
+        </div>
+        <button onclick="buyUpgrade('ai')"
+                id="aiCost">Cost: 10000 points</button>
+      </div>
+    </div>
+
+    <div id="prestigeSection"
+         class="tabContent">
+      <h2>Prestige</h2>
+      <p>Reset your progress to gain permanent multipliers!</p>
+      <p id="prestigeRequirement">Reach 100,000 points to prestige</p>
+      <button id="prestigeButton"
+              onclick="prestige()"
+              disabled>Prestige</button>
+      <div id="prestigeInfo">
+        <p>Next prestige will give you: <span id="nextPrestigeBonus">1</span> multiplier</p>
+        <p>Total prestige multiplier: <span id="totalMultiplier">1</span>x</p>
+      </div>
+    </div>
+
+    <div id="statsSection"
+         class="tabContent">
+      <h2>Game Statistics</h2>
+      <p>Total points earned: <span id="totalPointsEarned">0</span></p>
+      <p>Problems solved: <span id="problemsSolved">0</span></p>
+      <p>Correct answers: <span id="correctAnswers">0</span></p>
+      <p>Incorrect answers: <span id="incorrectAnswers">0</span></p>
+      <p>Time played: <span id="timePlayed">0</span> seconds</p>
+      <p>Prestiges completed: <span id="prestigesCompleted">0</span></p>
+    </div>
+  </div>
+
+  <script>
+    // Game state
+    let game = {
+      points: 0,
+      totalPointsEarned: 0,
+      clickValue: 1,
+      problemsSolved: 0,
+      correctAnswers: 0,
+      incorrectAnswers: 0,
+      timePlayed: 0,
+      prestigePoints: 0,
+      prestigeMultiplier: 1,
+      nextPrestigeAt: 100000,
+      currentProblem: { a: 2, b: 2, op: '+', answer: 4 },
+
+      upgrades: {
+        calculator: {
+          owned: 0,
+          baseCost: 10,
+          baseValue: 0.1,
+          costGrowth: 1.15
+        },
+        student: {
+          owned: 0,
+          baseCost: 100,
+          baseValue: 1,
+          costGrowth: 1.15
+        },
+        professor: {
+          owned: 0,
+          baseCost: 1000,
+          baseValue: 5,
+          costGrowth: 1.15
+        },
+        ai: {
+          owned: 0,
+          baseCost: 10000,
+          baseValue: 10,
+          costGrowth: 1.15
+        }
+      },
+
+      // Calculate points per second from all upgrades
+      get pointsPerSecond() {
+        let pps = 0;
+        for (const upgrade in this.upgrades) {
+          pps += this.upgrades[upgrade].owned * this.upgrades[upgrade].baseValue;
+        }
+        return pps * this.prestigeMultiplier;
+      }
+    };
+
+    // DOM elements
+    const elements = {
+      pointsDisplay: document.getElementById('pointsDisplay'),
+      prestigeDisplay: document.getElementById('prestigeDisplay'),
+      multiplierDisplay: document.getElementById('multiplierDisplay'),
+      mathProblem: document.getElementById('mathProblem'),
+      answerInput: document.getElementById('answerInput'),
+      submitAnswer: document.getElementById('submitAnswer'),
+      feedback: document.getElementById('feedback'),
+      clickValue: document.getElementById('clickValue'),
+      prestigeButton: document.getElementById('prestigeButton'),
+      prestigeRequirement: document.getElementById('prestigeRequirement'),
+      nextPrestigeBonus: document.getElementById('nextPrestigeBonus'),
+      totalMultiplier: document.getElementById('totalMultiplier'),
+      totalPointsEarned: document.getElementById('totalPointsEarned'),
+      problemsSolved: document.getElementById('problemsSolved'),
+      correctAnswers: document.getElementById('correctAnswers'),
+      incorrectAnswers: document.getElementById('incorrectAnswers'),
+      timePlayed: document.getElementById('timePlayed'),
+      prestigesCompleted: document.getElementById('prestigesCompleted')
+    };
+
+    // Initialize the game
+    function init() {
+      loadGame();
+      generateNewProblem();
+      updateUI();
+      setupEventListeners();
+
+      // Game loop that runs every second
+      setInterval(gameLoop, 1000);
+
+      // Update time played every second
+      setInterval(() => {
+        game.timePlayed++;
+        updateStats();
+      }, 1000);
+    }
+
+    // Game loop for passive income
+    function gameLoop() {
+      const pointsGained = game.pointsPerSecond;
+      if (pointsGained > 0) {
+        addPoints(pointsGained);
+        updateUI();
+      }
+    }
+
+    // Set up event listeners
+    function setupEventListeners() {
+      elements.submitAnswer.addEventListener('click', checkAnswer);
+      elements.answerInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          checkAnswer();
+        }
+      });
+    }
+
+    // Check the submitted answer
+    function checkAnswer() {
+      const userAnswer = parseInt(elements.answerInput.value);
+      if (isNaN(userAnswer)) {
+        showFeedback("Please enter a valid number", false);
+        return;
+      }
+
+      game.problemsSolved++;
+
+      if (userAnswer === game.currentProblem.answer) {
+        addPoints(game.clickValue * game.prestigeMultiplier);
+        game.correctAnswers++;
+        showFeedback("Correct! +" + (game.clickValue * game.prestigeMultiplier) + " points", true);
+      } else {
+        game.incorrectAnswers++;
+        showFeedback("Incorrect! The answer was " + game.currentProblem.answer, false);
+      }
+
+      generateNewProblem();
+      updateUI();
+      elements.answerInput.value = '';
+      elements.answerInput.focus();
+    }
+
+    // Show feedback message
+    function showFeedback(message, isCorrect) {
+      elements.feedback.textContent = message;
+      elements.feedback.className = isCorrect ? 'correct' : 'incorrect';
+
+      // Clear feedback after 2 seconds
+      setTimeout(() => {
+        if (elements.feedback.textContent === message) {
+          elements.feedback.textContent = '';
+        }
+      }, 2000);
+    }
+
+    // Add points to the total
+    function addPoints(amount) {
+      game.points += amount;
+      game.totalPointsEarned += amount;
+
+      // Check if prestige is available
+      if (game.points >= game.nextPrestigeAt) {
+        elements.prestigeButton.disabled = false;
+      }
+    }
+
+    // Buy an upgrade
+    function buyUpgrade(type) {
+      const upgrade = game.upgrades[type];
+      const cost = getUpgradeCost(type);
+
+      if (game.points >= cost) {
+        game.points -= cost;
+        upgrade.owned++;
+        updateUI();
+      }
+    }
+
+    // Get the cost of an upgrade
+    function getUpgradeCost(type) {
+      const upgrade = game.upgrades[type];
+      return Math.floor(upgrade.baseCost * Math.pow(upgrade.costGrowth, upgrade.owned));
+    }
+
+    // Prestige reset
+    function prestige() {
+      const multiplierGained = Math.floor(game.points / game.nextPrestigeAt);
+      game.prestigePoints += multiplierGained;
+      game.prestigeMultiplier += multiplierGained;
+
+      // Reset game state
+      game.points = 0;
+      for (const upgrade in game.upgrades) {
+        game.upgrades[upgrade].owned = 0;
+      }
+
+      // Increase next prestige requirement
+      game.nextPrestigeAt = Math.floor(game.nextPrestigeAt * 2.5);
+
+      updateUI();
+      saveGame();
+    }
+
+    // Generate a new math problem
+    function generateNewProblem() {
+      const operations = ['+', '-', '*', '/'];
+      const operation = operations[Math.floor(Math.random() * operations.length)];
+
+      let a, b, answer;
+      switch (operation) {
+        case '+':
+          a = Math.floor(Math.random() * 50) + 1;
+          b = Math.floor(Math.random() * 50) + 1;
+          answer = a + b;
+          break;
+        case '-':
+          a = Math.floor(Math.random() * 50) + 50;
+          b = Math.floor(Math.random() * 50) + 1;
+          answer = a - b;
+          break;
+        case '*':
+          a = Math.floor(Math.random() * 12) + 1;
+          b = Math.floor(Math.random() * 12) + 1;
+          answer = a * b;
+          break;
+        case '/':
+          b = Math.floor(Math.random() * 10) + 1;
+          a = b * (Math.floor(Math.random() * 10) + 1);
+          answer = a / b;
+          break;
+      }
+
+      game.currentProblem = { a, b, op: operation, answer };
+      elements.mathProblem.textContent = `${a} ${operation} ${b} = `;
+    }
+
+    // Update all UI elements
+    function updateUI() {
+      // Points and resources
+      elements.pointsDisplay.textContent = Math.floor(game.points).toLocaleString();
+      elements.prestigeDisplay.textContent = game.prestigePoints;
+      elements.multiplierDisplay.textContent = game.prestigeMultiplier + 'x';
+      elements.clickValue.textContent = game.clickValue * game.prestigeMultiplier;
+
+      // Prestige section
+      elements.prestigeRequirement.textContent = `Reach ${game.nextPrestigeAt.toLocaleString()} points to prestige`;
+      elements.nextPrestigeBonus.textContent = Math.floor(game.points / game.nextPrestigeAt);
+      elements.totalMultiplier.textContent = game.prestigeMultiplier;
+      elements.prestigeButton.disabled = game.points < game.nextPrestigeAt;
+
+      // Upgrades
+      for (const upgrade in game.upgrades) {
+        const cost = getUpgradeCost(upgrade);
+        document.getElementById(`${upgrade}Cost`).textContent = `Cost: ${cost.toLocaleString()} points`;
+        document.getElementById(`${upgrade}Cost`).disabled = game.points < cost;
+
+        const upgradeElements = document.querySelectorAll(`.upgradeValue`);
+        const ownedElements = document.querySelectorAll(`.ownedCount`);
+
+        let i = 0;
+        for (const upg in game.upgrades) {
+          if (upg === upgrade) {
+            upgradeElements[i].textContent = (game.upgrades[upg].baseValue * game.prestigeMultiplier).toFixed(1);
+            ownedElements[i].textContent = game.upgrades[upg].owned;
+            break;
+          }
+          i++;
+        }
+      }
+
+      // Stats
+      updateStats();
+    }
+
+    // Update statistics
+    function updateStats() {
+      elements.totalPointsEarned.textContent = Math.floor(game.totalPointsEarned).toLocaleString();
+      elements.problemsSolved.textContent = game.problemsSolved.toLocaleString();
+      elements.correctAnswers.textContent = game.correctAnswers.toLocaleString();
+      elements.incorrectAnswers.textContent = game.incorrectAnswers.toLocaleString();
+      elements.timePlayed.textContent = game.timePlayed.toLocaleString();
+      elements.prestigesCompleted.textContent = game.prestigePoints.toLocaleString();
+    }
+
+    // Switch between tabs
+    function switchTab(tabName) {
+      // Hide all tab contents
+      document.querySelectorAll('.tabContent').forEach(tab => {
+        tab.classList.remove('active');
+      });
+
+      // Deactivate all tabs
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+
+      // Activate selected tab
+      document.getElementById(`${tabName}Section`).classList.add('active');
+
+      // Find and activate the clicked tab button
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(tab => {
+        if (tab.textContent.toLowerCase().includes(tabName)) {
+          tab.classList.add('active');
+        }
+      });
+    }
+
+    // Save game to localStorage
+    function saveGame() {
+      localStorage.setItem('mathIncrementalSave', JSON.stringify(game));
+    }
+
+    // Load game from localStorage
+    function loadGame() {
+      const save = localStorage.getItem('mathIncrementalSave');
+      if (save) {
+        const parsed = JSON.parse(save);
+
+        // Merge saved game with default game to ensure all properties exist
+        for (const key in parsed) {
+          if (game.hasOwnProperty(key)) {
+            game[key] = parsed[key];
+          }
+        }
+
+        // Ensure upgrades structure is complete
+        for (const upgrade in parsed.upgrades) {
+          if (game.upgrades[upgrade]) {
+            game.upgrades[upgrade].owned = parsed.upgrades[upgrade].owned || 0;
+          }
+        }
+
+        // Generate a new problem if none exists
+        if (!game.currentProblem) {
+          generateNewProblem();
+        }
+      }
+    }
+
+    // Auto-save every 30 seconds
+    setInterval(saveGame, 30000);
+
+    // Initialize the game when the page loads
+    window.onload = init;
+  </script>
+</body>
+
+</html>
