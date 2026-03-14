@@ -5,13 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
-  <title>Math Incremental</title>
+  <title>Stock Market Tycoon</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f0f8ff;
+      background-color: #f5f5f5;
       color: #333;
-      max-width: 800px;
+      max-width: 1000px;
       margin: 0 auto;
       padding: 20px;
       text-align: center;
@@ -19,7 +19,7 @@
 
     h1 {
       color: #2c3e50;
-      border-bottom: 2px solid #3498db;
+      border-bottom: 2px solid #27ae60;
       padding-bottom: 10px;
     }
 
@@ -30,7 +30,9 @@
     }
 
     #clickerSection,
-    #upgradesSection,
+    #businessesSection,
+    #investmentsSection,
+    #stockMarketSection,
     #prestigeSection {
       background-color: white;
       border-radius: 10px;
@@ -38,76 +40,55 @@
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
 
-    #mathProblemContainer {
+    #dealButton {
       font-size: 24px;
       margin: 20px 0;
-      padding: 15px;
-      background-color: #eaf2f8;
-      border-radius: 8px;
-    }
-
-    #answerInput {
-      font-size: 20px;
-      padding: 8px;
-      width: 80px;
-      text-align: center;
-      border: 2px solid #3498db;
-      border-radius: 5px;
-    }
-
-    #submitAnswer {
-      background-color: #3498db;
+      padding: 15px 30px;
+      background-color: #27ae60;
       color: white;
       border: none;
-      padding: 8px 15px;
-      font-size: 16px;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
-      margin-left: 10px;
-      transition: background-color 0.2s;
+      transition: transform 0.1s, background-color 0.2s;
     }
 
-    #submitAnswer:hover {
-      background-color: #2980b9;
+    #dealButton:hover {
+      background-color: #219653;
     }
 
-    #feedback {
-      min-height: 24px;
-      margin-top: 10px;
-      font-weight: bold;
+    #dealButton:active {
+      transform: scale(0.98);
     }
 
-    .correct {
-      color: #27ae60;
-    }
-
-    .incorrect {
-      color: #e74c3c;
-    }
-
-    #pointsDisplay {
+    #moneyDisplay {
       font-size: 28px;
       font-weight: bold;
       color: #27ae60;
     }
 
-    .upgrade {
+    .business,
+    .investment,
+    .stock {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 10px;
       margin: 10px 0;
-      background-color: #e8f4f8;
+      background-color: #e8f8f0;
       border-radius: 8px;
       transition: background-color 0.2s;
     }
 
-    .upgrade:hover {
-      background-color: #d0e3f0;
+    .business:hover,
+    .investment:hover,
+    .stock:hover {
+      background-color: #d0f0e0;
     }
 
-    .upgrade button {
-      background-color: #3498db;
+    .business button,
+    .investment button,
+    .stock button {
+      background-color: #2ecc71;
       color: white;
       border: none;
       padding: 8px 15px;
@@ -116,11 +97,28 @@
       transition: background-color 0.2s;
     }
 
-    .upgrade button:hover {
-      background-color: #2980b9;
+    .buy-button {
+      background-color: #2ecc71 !important;
     }
 
-    .upgrade button:disabled {
+    .sell-button {
+      background-color: #e74c3c !important;
+      margin-left: 5px;
+    }
+
+    .business button:hover,
+    .investment button:hover,
+    .stock button:hover {
+      background-color: #27ae60;
+    }
+
+    .sell-button:hover {
+      background-color: #c0392b !important;
+    }
+
+    .business button:disabled,
+    .investment button:disabled,
+    .stock button:disabled {
       background-color: #95a5a6;
       cursor: not-allowed;
     }
@@ -145,15 +143,17 @@
       display: flex;
       justify-content: space-around;
       margin-bottom: 20px;
+      flex-wrap: wrap;
     }
 
     .resource {
       font-size: 18px;
+      margin: 5px 10px;
     }
 
     .resourceValue {
       font-weight: bold;
-      color: #3498db;
+      color: #27ae60;
     }
 
     #prestigeInfo {
@@ -180,7 +180,7 @@
     }
 
     .tab.active {
-      background-color: #3498db;
+      background-color: #27ae60;
       color: white;
     }
 
@@ -191,15 +191,133 @@
     .tabContent.active {
       display: block;
     }
+
+    #newsTicker {
+      background-color: #2c3e50;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    #newsText {
+      display: inline-block;
+      padding-left: 100%;
+      animation: ticker 30s linear infinite;
+    }
+
+    @keyframes ticker {
+      0% {
+        transform: translateX(0);
+      }
+
+      100% {
+        transform: translateX(-100%);
+      }
+    }
+
+    .marketIndicator {
+      font-size: 14px;
+      margin-left: 10px;
+    }
+
+    .up {
+      color: #27ae60;
+    }
+
+    .down {
+      color: #e74c3c;
+    }
+
+    .stock-price {
+      font-weight: bold;
+    }
+
+    .stock-owned {
+      color: #3498db;
+      font-weight: bold;
+    }
+
+    .stock-profit {
+      font-size: 12px;
+    }
+
+    .positive {
+      color: #27ae60;
+    }
+
+    .negative {
+      color: #e74c3c;
+    }
+
+    .chart-container {
+      height: 100px;
+      margin: 10px 0;
+      position: relative;
+      border: 1px solid #eee;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .chart {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .chart-bar {
+      flex: 1;
+      background-color: #2ecc71;
+      margin: 0 1px;
+      transition: height 0.5s ease;
+    }
+
+    #stockMarketControls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    #stockMarketControls button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #nextDay {
+      background-color: #3498db;
+      color: white;
+    }
+
+    #nextHour {
+      background-color: #9b59b6;
+      color: white;
+    }
   </style>
 </head>
 
 <body>
-  <h1>Math Incremental</h1>
+  <h1>Stock Market Tycoon</h1>
+
+  <div id="newsTicker">
+    <div id="newsText">Breaking News: Global markets open strong... Interest rates hold steady... New economic policies
+      announced...</div>
+  </div>
 
   <div class="resourceDisplay">
-    <div class="resource">Points: <span id="pointsDisplay"
+    <div class="resource">Cash: $<span id="moneyDisplay"
             class="resourceValue">0</span></div>
+    <div class="resource">Net Worth: $<span id="netWorthDisplay"
+            class="resourceValue">0</span></div>
+    <div class="resource">Income: $<span id="incomeDisplay"
+            class="resourceValue">0</span>/s</div>
     <div class="resource">Prestige: <span id="prestigeDisplay"
             class="resourceValue">0</span></div>
     <div class="resource">Multiplier: <span id="multiplierDisplay"
@@ -208,134 +326,303 @@
 
   <div id="gameContainer">
     <div id="clickerSection">
-      <h2>Solve Problems</h2>
-      <p>Solve the math problem to earn points!</p>
-      <div id="mathProblemContainer">
-        <span id="mathProblem">2 + 2 = </span>
-        <input type="number"
-               id="answerInput">
-        <button id="submitAnswer">Submit</button>
-        <div id="feedback"></div>
-      </div>
-      <p>Points per correct answer: <span id="clickValue">1</span></p>
+      <h2>Make Deals</h2>
+      <p>Close business deals to earn seed money for investments!</p>
+      <button id="dealButton">Close Deal</button>
+      <p>Cash per deal: $<span id="dealValue">1</span></p>
     </div>
 
     <div class="tabs">
       <div class="tab active"
-           onclick="switchTab('upgrades')">Upgrades</div>
+           onclick="switchTab('businesses')">Businesses</div>
+      <div class="tab"
+           onclick="switchTab('stockMarket')">Stock Market</div>
+      <div class="tab"
+           onclick="switchTab('investments')">Investments</div>
       <div class="tab"
            onclick="switchTab('prestige')">Prestige</div>
       <div class="tab"
            onclick="switchTab('stats')">Stats</div>
     </div>
 
-    <div id="upgradesSection"
+    <div id="businessesSection"
          class="tabContent active">
-      <h2>Auto-Solvers</h2>
-      <p>These will automatically solve problems for you!</p>
+      <h2>Business Ventures</h2>
+      <p>These businesses generate passive income for you!</p>
 
-      <div class="upgrade">
+      <div class="business">
         <div>
-          <h3>Calculator</h3>
-          <p>Produces <span class="upgradeValue">0.1</span> points per second</p>
-          <p>Owned: <span class="ownedCount">0</span></p>
+          <h3>Lemonade Stand</h3>
+          <p>Generates $<span class="incomeValue">0.1</span> per second</p>
+          <p>Owned: <span class="ownedCount">0</span> <span class="marketIndicator up">↑5%</span></p>
         </div>
-        <button onclick="buyUpgrade('calculator')"
-                id="calculatorCost">Cost: 10 points</button>
+        <button onclick="buyBusiness('lemonade')"
+                id="lemonadeCost">Cost: $10</button>
       </div>
 
-      <div class="upgrade">
+      <div class="business">
         <div>
-          <h3>Math Student</h3>
-          <p>Produces <span class="upgradeValue">1</span> points per second</p>
-          <p>Owned: <span class="ownedCount">0</span></p>
+          <h3>Newsstand</h3>
+          <p>Generates $<span class="incomeValue">1</span> per second</p>
+          <p>Owned: <span class="ownedCount">0</span> <span class="marketIndicator up">↑3%</span></p>
         </div>
-        <button onclick="buyUpgrade('student')"
-                id="studentCost">Cost: 100 points</button>
+        <button onclick="buyBusiness('newsstand')"
+                id="newsstandCost">Cost: $100</button>
       </div>
 
-      <div class="upgrade">
+      <div class="business">
         <div>
-          <h3>Professor</h3>
-          <p>Produces <span class="upgradeValue">5</span> points per second</p>
-          <p>Owned: <span class="ownedCount">0</span></p>
+          <h3>Car Wash</h3>
+          <p>Generates $<span class="incomeValue">5</span> per second</p>
+          <p>Owned: <span class="ownedCount">0</span> <span class="marketIndicator down">↓2%</span></p>
         </div>
-        <button onclick="buyUpgrade('professor')"
-                id="professorCost">Cost: 1000 points</button>
+        <button onclick="buyBusiness('carwash')"
+                id="carwashCost">Cost: $1,000</button>
       </div>
 
-      <div class="upgrade">
+      <div class="business">
         <div>
-          <h3>Math AI</h3>
-          <p>Produces <span class="upgradeValue">10</span> points per second</p>
-          <p>Owned: <span class="ownedCount">0</span></p>
+          <h3>Restaurant</h3>
+          <p>Generates $<span class="incomeValue">10</span> per second</p>
+          <p>Owned: <span class="ownedCount">0</span> <span class="marketIndicator up">↑7%</span></p>
         </div>
-        <button onclick="buyUpgrade('ai')"
-                id="aiCost">Cost: 10000 points</button>
+        <button onclick="buyBusiness('restaurant')"
+                id="restaurantCost">Cost: $10,000</button>
+      </div>
+    </div>
+
+    <div id="stockMarketSection"
+         class="tabContent">
+      <h2>Stock Market</h2>
+      <p>Buy low and sell high to maximize your profits!</p>
+
+      <div id="stockMarketControls">
+        <button id="nextHour"
+                onclick="advanceTime(1)">Advance 1 Hour</button>
+        <button id="nextDay"
+                onclick="advanceTime(24)">Advance 1 Day</button>
+      </div>
+
+      <div class="stock">
+        <div>
+          <h3 id="stock1Name">Tech Giant Inc.</h3>
+          <div class="chart-container">
+            <div class="chart"
+                 id="stock1Chart"></div>
+          </div>
+          <p>Price: $<span class="stock-price"
+                  id="stock1Price">100.00</span>
+            (<span class="marketIndicator up"
+                  id="stock1Change">+2.5%</span>)</p>
+          <p>Owned: <span class="stock-owned"
+                  id="stock1Owned">0</span>
+            <span class="stock-profit"
+                  id="stock1Profit"></span>
+          </p>
+        </div>
+        <div>
+          <input type="number"
+                 id="stock1Qty"
+                 min="1"
+                 value="1"
+                 style="width: 60px; padding: 5px;">
+          <button class="buy-button"
+                  onclick="buyStock('stock1')">Buy</button>
+          <button class="sell-button"
+                  onclick="sellStock('stock1')">Sell</button>
+        </div>
+      </div>
+
+      <div class="stock">
+        <div>
+          <h3 id="stock2Name">Energy Corp</h3>
+          <div class="chart-container">
+            <div class="chart"
+                 id="stock2Chart"></div>
+          </div>
+          <p>Price: $<span class="stock-price"
+                  id="stock2Price">75.50</span>
+            (<span class="marketIndicator down"
+                  id="stock2Change">-1.2%</span>)</p>
+          <p>Owned: <span class="stock-owned"
+                  id="stock2Owned">0</span>
+            <span class="stock-profit"
+                  id="stock2Profit"></span>
+          </p>
+        </div>
+        <div>
+          <input type="number"
+                 id="stock2Qty"
+                 min="1"
+                 value="1"
+                 style="width: 60px; padding: 5px;">
+          <button class="buy-button"
+                  onclick="buyStock('stock2')">Buy</button>
+          <button class="sell-button"
+                  onclick="sellStock('stock2')">Sell</button>
+        </div>
+      </div>
+
+      <div class="stock">
+        <div>
+          <h3 id="stock3Name">Pharma Co</h3>
+          <div class="chart-container">
+            <div class="chart"
+                 id="stock3Chart"></div>
+          </div>
+          <p>Price: $<span class="stock-price"
+                  id="stock3Price">120.25</span>
+            (<span class="marketIndicator up"
+                  id="stock3Change">+5.8%</span>)</p>
+          <p>Owned: <span class="stock-owned"
+                  id="stock3Owned">0</span>
+            <span class="stock-profit"
+                  id="stock3Profit"></span>
+          </p>
+        </div>
+        <div>
+          <input type="number"
+                 id="stock3Qty"
+                 min="1"
+                 value="1"
+                 style="width: 60px; padding: 5px;">
+          <button class="buy-button"
+                  onclick="buyStock('stock3')">Buy</button>
+          <button class="sell-button"
+                  onclick="sellStock('stock3')">Sell</button>
+        </div>
+      </div>
+
+      <div class="stock">
+        <div>
+          <h3 id="stock4Name">Retail Group</h3>
+          <div class="chart-container">
+            <div class="chart"
+                 id="stock4Chart"></div>
+          </div>
+          <p>Price: $<span class="stock-price"
+                  id="stock4Price">45.75</span>
+            (<span class="marketIndicator down"
+                  id="stock4Change">-3.4%</span>)</p>
+          <p>Owned: <span class="stock-owned"
+                  id="stock4Owned">0</span>
+            <span class="stock-profit"
+                  id="stock4Profit"></span>
+          </p>
+        </div>
+        <div>
+          <input type="number"
+                 id="stock4Qty"
+                 min="1"
+                 value="1"
+                 style="width: 60px; padding: 5px;">
+          <button class="buy-button"
+                  onclick="buyStock('stock4')">Buy</button>
+          <button class="sell-button"
+                  onclick="sellStock('stock4')">Sell</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="investmentsSection"
+         class="tabContent">
+      <h2>Investment Portfolio</h2>
+      <p>These investments provide long-term growth!</p>
+
+      <div class="investment">
+        <div>
+          <h3>Real Estate</h3>
+          <p>Generates $<span class="incomeValue">20</span> per second</p>
+          <p>Owned: <span class="ownedCount">0</span> <span class="marketIndicator down">↓1%</span></p>
+        </div>
+        <button onclick="buyInvestment('realestate')"
+                id="realestateCost">Cost: $5,000</button>
+      </div>
+
+      <div class="investment">
+        <div>
+          <h3>Commodities</h3>
+          <p>Generates $<span class="incomeValue">100</span> per second</p>
+          <p>Owned: <span class="ownedCount">0</span> <span class="marketIndicator up">↑15%</span></p>
+        </div>
+        <button onclick="buyInvestment('commodities')"
+                id="commoditiesCost">Cost: $50,000</button>
+      </div>
+
+      <div class="investment">
+        <div>
+          <h3>Venture Capital</h3>
+          <p>Generates $<span class="incomeValue">500</span> per second</p>
+          <p>Owned: <span class="ownedCount">0</span> <span class="marketIndicator up">↑25%</span></p>
+        </div>
+        <button onclick="buyInvestment('vc')"
+                id="vcCost">Cost: $500,000</button>
       </div>
     </div>
 
     <div id="prestigeSection"
          class="tabContent">
-      <h2>Prestige</h2>
-      <p>Reset your progress to gain permanent multipliers!</p>
-      <p id="prestigeRequirement">Reach 100,000 points to prestige</p>
+      <h2>Economic Revolution</h2>
+      <p>Reset your economy to implement new economic systems and gain permanent multipliers!</p>
+      <p id="prestigeRequirement">Reach $1,000,000 to revolutionize</p>
       <button id="prestigeButton"
               onclick="prestige()"
-              disabled>Prestige</button>
+              disabled>Economic Revolution</button>
       <div id="prestigeInfo">
-        <p>Next prestige will give you: <span id="nextPrestigeBonus">1</span> multiplier</p>
-        <p>Total prestige multiplier: <span id="totalMultiplier">1</span>x</p>
+        <p>Next revolution will give you: <span id="nextPrestigeBonus">1</span> multiplier</p>
+        <p>Total economic multiplier: <span id="totalMultiplier">1</span>x</p>
       </div>
     </div>
 
     <div id="statsSection"
          class="tabContent">
-      <h2>Game Statistics</h2>
-      <p>Total points earned: <span id="totalPointsEarned">0</span></p>
-      <p>Problems solved: <span id="problemsSolved">0</span></p>
-      <p>Correct answers: <span id="correctAnswers">0</span></p>
-      <p>Incorrect answers: <span id="incorrectAnswers">0</span></p>
+      <h2>Economic Statistics</h2>
+      <p>Total cash earned: $<span id="totalCashEarned">0</span></p>
+      <p>Deals closed: <span id="dealsClosed">0</span></p>
+      <p>Businesses owned: <span id="businessesOwned">0</span></p>
+      <p>Stock trades: <span id="stockTrades">0</span></p>
+      <p>Stock profits: $<span id="stockProfits">0</span></p>
+      <p>Investments made: <span id="investmentsMade">0</span></p>
       <p>Time played: <span id="timePlayed">0</span> seconds</p>
-      <p>Prestiges completed: <span id="prestigesCompleted">0</span></p>
+      <p>Economic revolutions: <span id="prestigesCompleted">0</span></p>
     </div>
   </div>
 
   <script>
     // Game state
     let game = {
-      points: 0,
-      totalPointsEarned: 0,
-      clickValue: 1,
-      problemsSolved: 0,
-      correctAnswers: 0,
-      incorrectAnswers: 0,
+      money: 0,
+      totalCashEarned: 0,
+      dealValue: 1,
+      dealsClosed: 0,
       timePlayed: 0,
       prestigePoints: 0,
       prestigeMultiplier: 1,
-      nextPrestigeAt: 100000,
-      currentProblem: { a: 2, b: 2, op: '+', answer: 4 },
+      nextPrestigeAt: 1000000,
+      stockTrades: 0,
+      stockProfits: 0,
+      marketHours: 0,
 
-      upgrades: {
-        calculator: {
+      businesses: {
+        lemonade: {
           owned: 0,
           baseCost: 10,
           baseValue: 0.1,
           costGrowth: 1.15
         },
-        student: {
+        newsstand: {
           owned: 0,
           baseCost: 100,
           baseValue: 1,
           costGrowth: 1.15
         },
-        professor: {
+        carwash: {
           owned: 0,
           baseCost: 1000,
           baseValue: 5,
           costGrowth: 1.15
         },
-        ai: {
+        restaurant: {
           owned: 0,
           baseCost: 10000,
           baseValue: 10,
@@ -343,43 +630,353 @@
         }
       },
 
-      // Calculate points per second from all upgrades
-      get pointsPerSecond() {
-        let pps = 0;
-        for (const upgrade in this.upgrades) {
-          pps += this.upgrades[upgrade].owned * this.upgrades[upgrade].baseValue;
+      investments: {
+        realestate: {
+          owned: 0,
+          baseCost: 5000,
+          baseValue: 20,
+          costGrowth: 1.2
+        },
+        commodities: {
+          owned: 0,
+          baseCost: 50000,
+          baseValue: 100,
+          costGrowth: 1.2
+        },
+        vc: {
+          owned: 0,
+          baseCost: 500000,
+          baseValue: 500,
+          costGrowth: 1.2
         }
-        return pps * this.prestigeMultiplier;
+      },
+
+      stocks: {
+        stock1: {
+          name: "Tech Giant Inc.",
+          basePrice: 100,
+          volatility: 0.03,
+          trend: 0.001,
+          owned: 0,
+          costBasis: 0,
+          history: [],
+          chart: []
+        },
+        stock2: {
+          name: "Energy Corp",
+          basePrice: 75,
+          volatility: 0.025,
+          trend: -0.0005,
+          owned: 0,
+          costBasis: 0,
+          history: [],
+          chart: []
+        },
+        stock3: {
+          name: "Pharma Co",
+          basePrice: 120,
+          volatility: 0.035,
+          trend: 0.002,
+          owned: 0,
+          costBasis: 0,
+          history: [],
+          chart: []
+        },
+        stock4: {
+          name: "Retail Group",
+          basePrice: 45,
+          volatility: 0.04,
+          trend: -0.001,
+          owned: 0,
+          costBasis: 0,
+          history: [],
+          chart: []
+        }
+      },
+
+      // Calculate income per second from all businesses and investments
+      get incomePerSecond() {
+        let ips = 0;
+
+        // Business income
+        for (const business in this.businesses) {
+          ips += this.businesses[business].owned * this.businesses[business].baseValue;
+        }
+
+        // Investment income
+        for (const investment in this.investments) {
+          ips += this.investments[investment].owned * this.investments[investment].baseValue;
+        }
+
+        return ips * this.prestigeMultiplier;
+      },
+
+      // Calculate total net worth
+      get netWorth() {
+        let worth = this.money;
+
+        // Add business value
+        for (const business in this.businesses) {
+          worth += this.businesses[business].owned * (this.businesses[business].baseCost *
+            Math.pow(this.businesses[business].costGrowth, this.businesses[business].owned)) * 0.5;
+        }
+
+        // Add investment value
+        for (const investment in this.investments) {
+          worth += this.investments[investment].owned * (this.investments[investment].baseCost *
+            Math.pow(this.investments[investment].costGrowth, this.investments[investment].owned)) * 0.5;
+        }
+
+        // Add stock value
+        for (const stock in this.stocks) {
+          if (this.stocks[stock].history.length > 0) {
+            worth += this.stocks[stock].owned * this.stocks[stock].history[this.stocks[stock].history.length - 1].price;
+          }
+        }
+
+        return worth;
+      },
+
+      // Count total businesses owned
+      get totalBusinesses() {
+        let count = 0;
+        for (const business in this.businesses) {
+          count += this.businesses[business].owned;
+        }
+        return count;
+      },
+
+      // Count total investments made
+      get totalInvestments() {
+        let count = 0;
+        for (const investment in this.investments) {
+          count += this.investments[investment].owned;
+        }
+        return count;
       }
     };
 
+    // Initialize stock history and charts
+    function initStocks() {
+      for (const stock in game.stocks) {
+        // Initialize history with 30 data points
+        for (let i = 0; i < 30; i++) {
+          updateStockPrice(stock);
+        }
+
+        // Initialize chart with 20 data points
+        for (let i = 0; i < 20; i++) {
+          updateStockChart(stock);
+        }
+      }
+    }
+
+    // Update stock price based on volatility and trend
+    function updateStockPrice(stockId) {
+      const stock = game.stocks[stockId];
+      const lastPrice = stock.history.length > 0 ? stock.history[stock.history.length - 1].price : stock.basePrice;
+
+      // Random change based on volatility
+      let change = (Math.random() * 2 - 1) * stock.volatility;
+      // Add trend
+      change += stock.trend;
+      // Apply change
+      let newPrice = lastPrice * (1 + change);
+
+      // Ensure price doesn't go below 1
+      newPrice = Math.max(newPrice, 1);
+
+      stock.history.push({
+        price: newPrice,
+        time: game.marketHours
+      });
+
+      // Keep only 100 data points
+      if (stock.history.length > 100) {
+        stock.history.shift();
+      }
+
+      return newPrice;
+    }
+
+    // Update stock chart data
+    function updateStockChart(stockId) {
+      const stock = game.stocks[stockId];
+      const lastPrice = stock.history.length > 0 ? stock.history[stock.history.length - 1].price : stock.basePrice;
+
+      stock.chart.push(lastPrice);
+
+      // Keep only 20 data points for the chart
+      if (stock.chart.length > 20) {
+        stock.chart.shift();
+      }
+    }
+
+    // Advance time in the stock market
+    function advanceTime(hours) {
+      for (let i = 0; i < hours; i++) {
+        game.marketHours++;
+
+        // Update each stock
+        for (const stock in game.stocks) {
+          updateStockPrice(stock);
+          if (game.marketHours % 2 === 0) { // Update chart every 2 hours
+            updateStockChart(stock);
+          }
+        }
+      }
+
+      updateStockMarketUI();
+    }
+
+    // Buy a stock
+    function buyStock(stockId) {
+      const stock = game.stocks[stockId];
+      const qty = parseInt(document.getElementById(`${stockId}Qty`).value) || 1;
+      const currentPrice = stock.history.length > 0 ? stock.history[stock.history.length - 1].price : stock.basePrice;
+      const cost = currentPrice * qty;
+
+      if (game.money >= cost) {
+        game.money -= cost;
+        stock.owned += qty;
+
+        // Update cost basis (average purchase price)
+        const totalCost = stock.costBasis * (stock.owned - qty) + cost;
+        stock.costBasis = totalCost / stock.owned;
+
+        game.stockTrades++;
+        updateStockMarketUI();
+        updateUI();
+      }
+    }
+
+    // Sell a stock
+    function sellStock(stockId) {
+      const stock = game.stocks[stockId];
+      const qtyInput = document.getElementById(`${stockId}Qty`);
+      let qty = parseInt(qtyInput.value) || 1;
+
+      // Can't sell more than owned
+      qty = Math.min(qty, stock.owned);
+
+      if (qty > 0) {
+        const currentPrice = stock.history.length > 0 ? stock.history[stock.history.length - 1].price : stock.basePrice;
+        const proceeds = currentPrice * qty;
+        const profit = (currentPrice - stock.costBasis) * qty;
+
+        game.money += proceeds;
+        stock.owned -= qty;
+        game.stockTrades++;
+        game.stockProfits += profit;
+
+        // Reset cost basis if sold all
+        if (stock.owned === 0) {
+          stock.costBasis = 0;
+        }
+
+        updateStockMarketUI();
+        updateUI();
+      }
+    }
+
+    // Update stock market UI
+    function updateStockMarketUI() {
+      for (const stockId in game.stocks) {
+        const stock = game.stocks[stockId];
+        const currentPrice = stock.history.length > 0 ? stock.history[stock.history.length - 1].price : stock.basePrice;
+        const prevPrice = stock.history.length > 1 ? stock.history[stock.history.length - 2].price : stock.basePrice;
+        const change = ((currentPrice - prevPrice) / prevPrice) * 100;
+
+        // Update stock info
+        document.getElementById(`${stockId}Name`).textContent = stock.name;
+        document.getElementById(`${stockId}Price`).textContent = currentPrice.toFixed(2);
+        document.getElementById(`${stockId}Owned`).textContent = stock.owned;
+
+        // Update change indicator
+        const changeElement = document.getElementById(`${stockId}Change`);
+        changeElement.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+        changeElement.className = `marketIndicator ${change >= 0 ? 'up' : 'down'}`;
+
+        // Update profit/loss display
+        const profitElement = document.getElementById(`${stockId}Profit`);
+        if (stock.owned > 0) {
+          const profit = (currentPrice - stock.costBasis) * stock.owned;
+          profitElement.textContent = `(${profit >= 0 ? '+' : ''}${profit.toFixed(2)})`;
+          profitElement.className = `stock-profit ${profit >= 0 ? 'positive' : 'negative'}`;
+        } else {
+          profitElement.textContent = '';
+        }
+
+        // Update chart
+        const chartElement = document.getElementById(`${stockId}Chart`);
+        chartElement.innerHTML = '';
+
+        if (stock.chart.length > 0) {
+          // Find min and max for scaling
+          const minPrice = Math.min(...stock.chart);
+          const maxPrice = Math.max(...stock.chart);
+          const range = maxPrice - minPrice || 1; // Avoid division by zero
+
+          stock.chart.forEach(price => {
+            const bar = document.createElement('div');
+            bar.className = 'chart-bar';
+            // Scale height to fit container (0-100%)
+            bar.style.height = `${((price - minPrice) / range) * 100}%`;
+            chartElement.appendChild(bar);
+          });
+        }
+      }
+    }
+
     // DOM elements
     const elements = {
-      pointsDisplay: document.getElementById('pointsDisplay'),
+      moneyDisplay: document.getElementById('moneyDisplay'),
+      netWorthDisplay: document.getElementById('netWorthDisplay'),
+      incomeDisplay: document.getElementById('incomeDisplay'),
       prestigeDisplay: document.getElementById('prestigeDisplay'),
       multiplierDisplay: document.getElementById('multiplierDisplay'),
-      mathProblem: document.getElementById('mathProblem'),
-      answerInput: document.getElementById('answerInput'),
-      submitAnswer: document.getElementById('submitAnswer'),
-      feedback: document.getElementById('feedback'),
-      clickValue: document.getElementById('clickValue'),
+      dealButton: document.getElementById('dealButton'),
+      dealValue: document.getElementById('dealValue'),
       prestigeButton: document.getElementById('prestigeButton'),
       prestigeRequirement: document.getElementById('prestigeRequirement'),
       nextPrestigeBonus: document.getElementById('nextPrestigeBonus'),
       totalMultiplier: document.getElementById('totalMultiplier'),
-      totalPointsEarned: document.getElementById('totalPointsEarned'),
-      problemsSolved: document.getElementById('problemsSolved'),
-      correctAnswers: document.getElementById('correctAnswers'),
-      incorrectAnswers: document.getElementById('incorrectAnswers'),
+      totalCashEarned: document.getElementById('totalCashEarned'),
+      dealsClosed: document.getElementById('dealsClosed'),
+      businessesOwned: document.getElementById('businessesOwned'),
+      stockTrades: document.getElementById('stockTrades'),
+      stockProfits: document.getElementById('stockProfits'),
+      investmentsMade: document.getElementById('investmentsMade'),
       timePlayed: document.getElementById('timePlayed'),
-      prestigesCompleted: document.getElementById('prestigesCompleted')
+      prestigesCompleted: document.getElementById('prestigesCompleted'),
+      newsText: document.getElementById('newsText')
     };
+
+    // News headlines
+    const newsHeadlines = [
+      "Breaking: Stock markets reach all-time high!",
+      "Economic summit concludes with new trade agreements",
+      "Tech sector leads market gains this quarter",
+      "Central bank announces interest rate decision",
+      "New economic stimulus package announced",
+      "Cryptocurrency markets show volatility",
+      "Housing market continues to cool",
+      "Unemployment rate drops to 10-year low",
+      "Global supply chains stabilizing, experts say",
+      "Consumer confidence index rises unexpectedly",
+      "Tech Giant Inc. announces breakthrough product",
+      "Energy Corp reports record profits",
+      "Pharma Co gets FDA approval for new drug",
+      "Retail Group expands to new markets",
+      "Market analysts predict bullish quarter ahead"
+    ];
 
     // Initialize the game
     function init() {
       loadGame();
-      generateNewProblem();
+      initStocks();
       updateUI();
+      updateStockMarketUI();
       setupEventListeners();
 
       // Game loop that runs every second
@@ -389,175 +986,181 @@
       setInterval(() => {
         game.timePlayed++;
         updateStats();
+
+        // Update news ticker every 10 seconds
+        if (game.timePlayed % 10 === 0) {
+          updateNews();
+        }
+
+        // Advance market time automatically (1 hour every 5 seconds)
+        if (game.timePlayed % 5 === 0) {
+          advanceTime(1);
+        }
       }, 1000);
+
+      // Initial news ticker update
+      updateNews();
     }
 
     // Game loop for passive income
     function gameLoop() {
-      const pointsGained = game.pointsPerSecond;
-      if (pointsGained > 0) {
-        addPoints(pointsGained);
+      const income = game.incomePerSecond;
+      if (income > 0) {
+        addMoney(income);
         updateUI();
       }
+    }
+
+    // Update news ticker
+    function updateNews() {
+      const randomHeadline = newsHeadlines[Math.floor(Math.random() * newsHeadlines.length)];
+      const marketChange = (Math.random() > 0.5 ? "+" : "-") + Math.floor(Math.random() * 5 + 1) + "%";
+      elements.newsText.textContent = `${randomHeadline}... Market Update: ${marketChange}... `;
     }
 
     // Set up event listeners
     function setupEventListeners() {
-      elements.submitAnswer.addEventListener('click', checkAnswer);
-      elements.answerInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          checkAnswer();
-        }
+      elements.dealButton.addEventListener('click', () => {
+        addMoney(game.dealValue * game.prestigeMultiplier);
+        game.dealsClosed++;
+        updateUI();
+        animateDeal();
       });
     }
 
-    // Check the submitted answer
-    function checkAnswer() {
-      const userAnswer = parseInt(elements.answerInput.value);
-      if (isNaN(userAnswer)) {
-        showFeedback("Please enter a valid number", false);
-        return;
-      }
-
-      game.problemsSolved++;
-
-      if (userAnswer === game.currentProblem.answer) {
-        addPoints(game.clickValue * game.prestigeMultiplier);
-        game.correctAnswers++;
-        showFeedback("Correct! +" + (game.clickValue * game.prestigeMultiplier) + " points", true);
-      } else {
-        game.incorrectAnswers++;
-        showFeedback("Incorrect! The answer was " + game.currentProblem.answer, false);
-      }
-
-      generateNewProblem();
-      updateUI();
-      elements.answerInput.value = '';
-      elements.answerInput.focus();
-    }
-
-    // Show feedback message
-    function showFeedback(message, isCorrect) {
-      elements.feedback.textContent = message;
-      elements.feedback.className = isCorrect ? 'correct' : 'incorrect';
-
-      // Clear feedback after 2 seconds
-      setTimeout(() => {
-        if (elements.feedback.textContent === message) {
-          elements.feedback.textContent = '';
-        }
-      }, 2000);
-    }
-
-    // Add points to the total
-    function addPoints(amount) {
-      game.points += amount;
-      game.totalPointsEarned += amount;
+    // Add money to the total
+    function addMoney(amount) {
+      game.money += amount;
+      game.totalCashEarned += amount;
 
       // Check if prestige is available
-      if (game.points >= game.nextPrestigeAt) {
+      if (game.money >= game.nextPrestigeAt) {
         elements.prestigeButton.disabled = false;
       }
     }
 
-    // Buy an upgrade
-    function buyUpgrade(type) {
-      const upgrade = game.upgrades[type];
-      const cost = getUpgradeCost(type);
+    // Buy a business
+    function buyBusiness(type) {
+      const business = game.businesses[type];
+      const cost = getBusinessCost(type);
 
-      if (game.points >= cost) {
-        game.points -= cost;
-        upgrade.owned++;
+      if (game.money >= cost) {
+        game.money -= cost;
+        business.owned++;
         updateUI();
       }
     }
 
-    // Get the cost of an upgrade
-    function getUpgradeCost(type) {
-      const upgrade = game.upgrades[type];
-      return Math.floor(upgrade.baseCost * Math.pow(upgrade.costGrowth, upgrade.owned));
+    // Get the cost of a business
+    function getBusinessCost(type) {
+      const business = game.businesses[type];
+      return Math.floor(business.baseCost * Math.pow(business.costGrowth, business.owned));
+    }
+
+    // Buy an investment
+    function buyInvestment(type) {
+      const investment = game.investments[type];
+      const cost = getInvestmentCost(type);
+
+      if (game.money >= cost) {
+        game.money -= cost;
+        investment.owned++;
+        updateUI();
+      }
+    }
+
+    // Get the cost of an investment
+    function getInvestmentCost(type) {
+      const investment = game.investments[type];
+      return Math.floor(investment.baseCost * Math.pow(investment.costGrowth, investment.owned));
     }
 
     // Prestige reset
     function prestige() {
-      const multiplierGained = Math.floor(game.points / game.nextPrestigeAt);
+      const multiplierGained = Math.floor(game.money / game.nextPrestigeAt);
       game.prestigePoints += multiplierGained;
       game.prestigeMultiplier += multiplierGained;
 
       // Reset game state
-      game.points = 0;
-      for (const upgrade in game.upgrades) {
-        game.upgrades[upgrade].owned = 0;
+      game.money = 0;
+      for (const business in game.businesses) {
+        game.businesses[business].owned = 0;
+      }
+      for (const investment in game.investments) {
+        game.investments[investment].owned = 0;
+      }
+      for (const stock in game.stocks) {
+        game.stocks[stock].owned = 0;
+        game.stocks[stock].costBasis = 0;
       }
 
       // Increase next prestige requirement
       game.nextPrestigeAt = Math.floor(game.nextPrestigeAt * 2.5);
 
       updateUI();
+      updateStockMarketUI();
       saveGame();
     }
 
-    // Generate a new math problem
-    function generateNewProblem() {
-      const operations = ['+', '-', '*', '/'];
-      const operation = operations[Math.floor(Math.random() * operations.length)];
-
-      let a, b, answer;
-      switch (operation) {
-        case '+':
-          a = Math.floor(Math.random() * 50) + 1;
-          b = Math.floor(Math.random() * 50) + 1;
-          answer = a + b;
-          break;
-        case '-':
-          a = Math.floor(Math.random() * 50) + 50;
-          b = Math.floor(Math.random() * 50) + 1;
-          answer = a - b;
-          break;
-        case '*':
-          a = Math.floor(Math.random() * 12) + 1;
-          b = Math.floor(Math.random() * 12) + 1;
-          answer = a * b;
-          break;
-        case '/':
-          b = Math.floor(Math.random() * 10) + 1;
-          a = b * (Math.floor(Math.random() * 10) + 1);
-          answer = a / b;
-          break;
-      }
-
-      game.currentProblem = { a, b, op: operation, answer };
-      elements.mathProblem.textContent = `${a} ${operation} ${b} = `;
+    // Animate the deal button
+    function animateDeal() {
+      const button = elements.dealButton;
+      button.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        button.style.transform = 'scale(1)';
+      }, 100);
     }
 
     // Update all UI elements
     function updateUI() {
-      // Points and resources
-      elements.pointsDisplay.textContent = Math.floor(game.points).toLocaleString();
+      // Money and resources
+      elements.moneyDisplay.textContent = Math.floor(game.money).toLocaleString();
+      elements.netWorthDisplay.textContent = Math.floor(game.netWorth).toLocaleString();
+      elements.incomeDisplay.textContent = game.incomePerSecond.toFixed(1);
       elements.prestigeDisplay.textContent = game.prestigePoints;
       elements.multiplierDisplay.textContent = game.prestigeMultiplier + 'x';
-      elements.clickValue.textContent = game.clickValue * game.prestigeMultiplier;
+      elements.dealValue.textContent = game.dealValue * game.prestigeMultiplier;
 
       // Prestige section
-      elements.prestigeRequirement.textContent = `Reach ${game.nextPrestigeAt.toLocaleString()} points to prestige`;
-      elements.nextPrestigeBonus.textContent = Math.floor(game.points / game.nextPrestigeAt);
+      elements.prestigeRequirement.textContent = `Reach $${game.nextPrestigeAt.toLocaleString()} to revolutionize`;
+      elements.nextPrestigeBonus.textContent = Math.floor(game.money / game.nextPrestigeAt);
       elements.totalMultiplier.textContent = game.prestigeMultiplier;
-      elements.prestigeButton.disabled = game.points < game.nextPrestigeAt;
+      elements.prestigeButton.disabled = game.money < game.nextPrestigeAt;
 
-      // Upgrades
-      for (const upgrade in game.upgrades) {
-        const cost = getUpgradeCost(upgrade);
-        document.getElementById(`${upgrade}Cost`).textContent = `Cost: ${cost.toLocaleString()} points`;
-        document.getElementById(`${upgrade}Cost`).disabled = game.points < cost;
+      // Businesses
+      for (const business in game.businesses) {
+        const cost = getBusinessCost(business);
+        document.getElementById(`${business}Cost`).textContent = `Cost: $${cost.toLocaleString()}`;
+        document.getElementById(`${business}Cost`).disabled = game.money < cost;
 
-        const upgradeElements = document.querySelectorAll(`.upgradeValue`);
-        const ownedElements = document.querySelectorAll(`.ownedCount`);
+        const incomeValueElements = document.querySelectorAll(`.incomeValue`);
+        const ownedCountElements = document.querySelectorAll(`.ownedCount`);
 
         let i = 0;
-        for (const upg in game.upgrades) {
-          if (upg === upgrade) {
-            upgradeElements[i].textContent = (game.upgrades[upg].baseValue * game.prestigeMultiplier).toFixed(1);
-            ownedElements[i].textContent = game.upgrades[upg].owned;
+        for (const biz in game.businesses) {
+          if (biz === business) {
+            incomeValueElements[i].textContent = (game.businesses[biz].baseValue * game.prestigeMultiplier).toFixed(1);
+            ownedCountElements[i].textContent = game.businesses[biz].owned;
+            break;
+          }
+          i++;
+        }
+      }
+
+      // Investments
+      for (const investment in game.investments) {
+        const cost = getInvestmentCost(investment);
+        document.getElementById(`${investment}Cost`).textContent = `Cost: $${cost.toLocaleString()}`;
+        document.getElementById(`${investment}Cost`).disabled = game.money < cost;
+
+        const incomeValueElements = document.querySelectorAll(`.incomeValue`);
+        const ownedCountElements = document.querySelectorAll(`.ownedCount`);
+
+        let i = 0;
+        for (const inv in game.investments) {
+          if (inv === investment) {
+            incomeValueElements[i + 4].textContent = (game.investments[inv].baseValue * game.prestigeMultiplier).toFixed(1);
+            ownedCountElements[i + 4].textContent = game.investments[inv].owned;
             break;
           }
           i++;
@@ -570,10 +1173,12 @@
 
     // Update statistics
     function updateStats() {
-      elements.totalPointsEarned.textContent = Math.floor(game.totalPointsEarned).toLocaleString();
-      elements.problemsSolved.textContent = game.problemsSolved.toLocaleString();
-      elements.correctAnswers.textContent = game.correctAnswers.toLocaleString();
-      elements.incorrectAnswers.textContent = game.incorrectAnswers.toLocaleString();
+      elements.totalCashEarned.textContent = Math.floor(game.totalCashEarned).toLocaleString();
+      elements.dealsClosed.textContent = game.dealsClosed.toLocaleString();
+      elements.businessesOwned.textContent = game.totalBusinesses.toLocaleString();
+      elements.stockTrades.textContent = game.stockTrades.toLocaleString();
+      elements.stockProfits.textContent = Math.floor(game.stockProfits).toLocaleString();
+      elements.investmentsMade.textContent = game.totalInvestments.toLocaleString();
       elements.timePlayed.textContent = game.timePlayed.toLocaleString();
       elements.prestigesCompleted.textContent = game.prestigePoints.toLocaleString();
     }
@@ -600,16 +1205,21 @@
           tab.classList.add('active');
         }
       });
+
+      // Update stock market when switching to that tab
+      if (tabName === 'stockMarket') {
+        updateStockMarketUI();
+      }
     }
 
     // Save game to localStorage
     function saveGame() {
-      localStorage.setItem('mathIncrementalSave', JSON.stringify(game));
+      localStorage.setItem('stockMarketTycoonSave', JSON.stringify(game));
     }
 
     // Load game from localStorage
     function loadGame() {
-      const save = localStorage.getItem('mathIncrementalSave');
+      const save = localStorage.getItem('stockMarketTycoonSave');
       if (save) {
         const parsed = JSON.parse(save);
 
@@ -620,16 +1230,28 @@
           }
         }
 
-        // Ensure upgrades structure is complete
-        for (const upgrade in parsed.upgrades) {
-          if (game.upgrades[upgrade]) {
-            game.upgrades[upgrade].owned = parsed.upgrades[upgrade].owned || 0;
+        // Ensure businesses structure is complete
+        for (const business in parsed.businesses) {
+          if (game.businesses[business]) {
+            game.businesses[business].owned = parsed.businesses[business].owned || 0;
           }
         }
 
-        // Generate a new problem if none exists
-        if (!game.currentProblem) {
-          generateNewProblem();
+        // Ensure investments structure is complete
+        for (const investment in parsed.investments) {
+          if (game.investments[investment]) {
+            game.investments[investment].owned = parsed.investments[investment].owned || 0;
+          }
+        }
+
+        // Ensure stocks structure is complete
+        for (const stock in parsed.stocks) {
+          if (game.stocks[stock]) {
+            game.stocks[stock].owned = parsed.stocks[stock].owned || 0;
+            game.stocks[stock].costBasis = parsed.stocks[stock].costBasis || 0;
+            game.stocks[stock].history = parsed.stocks[stock].history || [];
+            game.stocks[stock].chart = parsed.stocks[stock].chart || [];
+          }
         }
       }
     }
