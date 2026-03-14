@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Color Alchemist: Discovery</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #1e293b;
+        --text: #f8fafc;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", sans-serif;
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Sidebar for Controls */
+      #ui {
+        width: 300px;
+        background: var(--card);
+        padding: 20px;
+        border-right: 2px solid #334155;
+        display: flex;
+        flexdirection: column;
+        gap: 10px;
+      }
+
+      /* The Canvas Area */
+      #game-container {
+        flex-grow: 1;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      canvas {
+        border-radius: 20px;
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        background: #000;
+      }
+
+      .btn {
+        padding: 15px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: transform 0.1s;
+        color: white;
+      }
+      .btn:active {
+        transform: scale(0.95);
+      }
+      .reset-btn {
+        background: #ef4444;
+        margin-top: auto;
+      }
+
+      .discovery-log {
+        margin-top: 20px;
+        font-size: 0.9em;
+        height: 200px;
+        overflow-y: auto;
+        color: #94a3b8;
+      }
+      .new-discovery {
+        color: #fbbf24;
+        font-weight: bold;
+        animation: glow 1s infinite alternate;
+      }
+
+      @keyframes glow {
+        from {
+          text-shadow: 0 0 5px #fbbf24;
+        }
+        to {
+          text-shadow: 0 0 20px #fbbf24;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ui">
+      <h2>Stock Liquids</h2>
+      <button
+        class="btn"
+        style="background: #ff4d4d"
+        onclick="addLiquid('#FF4D4D')">
+        Add Red (1L)
+      </button>
+      <button
+        class="btn"
+        style="background: #4d79ff"
+        onclick="addLiquid('#4D79FF')">
+        Add Blue (1L)
+      </button>
+      <button
+        class="btn"
+        style="background: #ffeb3b; color: black"
+        onclick="addLiquid('#FFEB3B')">
+        Add Yellow (1L)
+      </button>
+
+      <div class="discovery-log" id="log">
+        <strong>Discoveries:</strong><br />
+        Mix colors to find secrets...
+      </div>
+
+      <button class="btn reset-btn" onclick="resetVat()">Empty Vat</button>
+    </div>
+
+    <div id="game-container">
+      <h1 id="discovery-name">Empty Vat</h1>
+      <canvas id="vatCanvas"></canvas>
+      <p id="vat-info">Total Volume: 0L</p>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("vatCanvas");
+      const ctx = canvas.getContext("2d");
+      const log = document.getElementById("log");
+      const nameDisplay = document.getElementById("discovery-name");
+
+      let vat = []; // Stores {r, g, b, vol}
+      let discovered = new Set();
+
+      // The "Secret Recipes" - using tolerance for Hex matches
+      const Recipes = [
+        { name: "Sunset Orange", hex: "#E7A84D" },
+        { name: "Deep Violet", hex: "#7E56A8" },
+        { name: "Forest Green", hex: "#91AF64" },
+        { name: "Neutral Grey", hex: "#A9AC9B" },
+      ];
+
+      function hexToRgb(hex) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return { r, g, b };
+      }
+
+      function addLiquid(hex) {
+        const rgb = hexToRgb(hex);
+        vat.push({ ...rgb, vol: 1 });
+        updateMix();
+      }
+
+      function resetVat() {
+        vat = [];
+        updateMix();
+        nameDisplay.innerText = "Empty Vat";
+        nameDisplay.style.color = "white";
+      }
+
+      function updateMix() {
+        if (vat.length === 0) {
+          render("#000000", 0);
+          return;
+        }
+
+        let totalVol = vat.length;
+        let sumR2 = 0,
+          sumG2 = 0,
+          sumB2 = 0;
+
+        vat.forEach((l) => {
+          sumR2 += l.r ** 2;
+          sumG2 += l.g ** 2;
+          sumB2 += l.b ** 2;
+        });
+
+        const r = Math.sqrt(sumR2 / totalVol);
+        const g = Math.sqrt(sumG2 / totalVol);
+        const b = Math.sqrt(sumB2 / totalVol);
+
+        const toHex = (v) => Math.round(v).toString(16).padStart(2, "0");
+        const currentHex = `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+
+        checkRecipes(currentHex);
+        render(currentHex, totalVol);
+      }
+
+      function checkRecipes(currentHex) {
+        Recipes.forEach((recipe) => {
+          // If the hex is exactly the same or very close
+          if (currentHex === recipe.hex && !discovered.has(recipe.name)) {
+            discovered.add(recipe.name);
+            log.innerHTML += `<div class="new-discovery">Discovered: ${recipe.name}!</div>`;
+            nameDisplay.innerText = `✨ ${recipe.name} ✨`;
+            nameDisplay.style.color = recipe.hex;
+          } else if (currentHex === recipe.hex) {
+            nameDisplay.innerText = recipe.name;
+            nameDisplay.style.color = recipe.hex;
+          }
+        });
+      }
+
+      function render(hex, vol) {
+        const size = 400;
+        canvas.width = canvas.height = size;
+
+        ctx.clearRect(0, 0, size, size);
+
+        // Draw the "Liquid" in the vat
+        // Level increases with volume
+        const fillHeight = Math.min(vol * 20, size);
+        ctx.fillStyle = hex;
+        ctx.fillRect(0, size - fillHeight, size, fillHeight);
+
+        document.getElementById("vat-info").innerText =
+          `Total Volume: ${vol}L | Hex: ${hex}`;
+      }
+
+      render("#000000", 0);
+    </script>
+  </body>
+</html>
