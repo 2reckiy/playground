@@ -1,0 +1,24 @@
+{
+  "name": "playground",
+  "version": "0.0.1",
+  "description": "My Games Collection",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/2reckiy/playground.git"
+  },
+  "keywords": [
+    "games",
+    "playground",
+    "js"
+  ],
+  "author": "2reckiy",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/2reckiy/playground/issues"
+  },
+  "homepage": "https://github.com/2reckiy/playground#readme"
+}
