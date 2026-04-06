@@ -105,7 +105,7 @@
           const endX = startX + dim.w;
 
           ctx.beginPath();
-          ctx.moveTo(startX * PIXEL, (height) * PIXEL); // Bottom left
+          ctx.moveTo(startX * PIXEL, height * PIXEL); // Bottom left
 
           // Top surface with Jitter
           for (let i = 0; i <= dim.w; i++) {
@@ -114,7 +114,7 @@
             ctx.lineTo((startX + i) * PIXEL, (height - dim.h + j) * PIXEL);
           }
 
-          ctx.lineTo(endX * PIXEL, (height) * PIXEL); // Bottom right
+          ctx.lineTo(endX * PIXEL, height * PIXEL); // Bottom right
           ctx.closePath();
 
           // Fill Body

@@ -1,0 +1,380 @@
+{
+  "time": 1775505457296,
+  "path": "games",
+  "games": [
+    {
+      "id": "archery",
+      "title": "Archery",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "id": "backpack",
+      "title": "Backpack",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "battleships",
+      "title": "Battleships",
+      "path": "index.html",
+      "versions": [
+        "-original",
+        "1"
+      ]
+    },
+    {
+      "id": "blacksmith",
+      "title": "Blacksmith",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "bullet-heaven",
+      "title": "Bullet-heaven",
+      "path": "index.html",
+      "versions": [
+        "0",
+        "1",
+        "2-1",
+        "2"
+      ]
+    },
+    {
+      "id": "circleTown",
+      "title": "CircleTown",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "id": "clicker",
+      "title": "Clicker",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5-1",
+        "5-2",
+        "5"
+      ]
+    },
+    {
+      "id": "coloring-pixels",
+      "title": "Coloring-pixels",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "colors-mixing",
+      "title": "Colors-mixing",
+      "path": "index.html",
+      "versions": [
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "distances",
+      "title": "Distances",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "dota",
+      "title": "Dota",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "id": "dots",
+      "title": "Dots",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "dynasty",
+      "title": "Dynasty",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "1_temp",
+        "2",
+        "2_temp",
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "fog",
+      "title": "Fog",
+      "path": "index.html",
+      "versions": [
+        "1"
+      ]
+    },
+    {
+      "id": "formula",
+      "title": "Formula",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "fourie",
+      "title": "Fourie",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "fractal",
+      "title": "Fractal",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ]
+    },
+    {
+      "id": "generators",
+      "title": "Generators",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "hexish",
+      "title": "Hexish",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "idle-math",
+      "title": "Idle-math",
+      "path": "index.html",
+      "versions": [
+        "2"
+      ]
+    },
+    {
+      "id": "img-to-ascii",
+      "title": "Img-to-ascii",
+      "path": "index.html",
+      "versions": [
+        "2",
+        "3"
+      ]
+    },
+    {
+      "id": "isometric",
+      "title": "Isometric",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "id": "maze",
+      "title": "Maze",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ]
+    },
+    {
+      "id": "micro-civs",
+      "title": "Micro-civs",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "mining",
+      "title": "Mining",
+      "path": "index.html",
+      "versions": [
+        "-home-cell-5",
+        "-optim",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "mistery",
+      "title": "Mistery",
+      "path": "index.html",
+      "versions": [
+        "0",
+        "1-0",
+        "1-1",
+        "2-0",
+        "2-1",
+        "2-2",
+        "3",
+        "4",
+        "5",
+        "6-elementary-particlese",
+        "7"
+      ]
+    },
+    {
+      "id": "neo-blacksmith",
+      "title": "Neo-blacksmith",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ]
+    },
+    {
+      "id": "pixelart",
+      "title": "Pixelart",
+      "path": "index.html",
+      "versions": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5-1",
+        "5-2",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "racing",
+      "title": "Racing",
+      "path": "index.html",
+      "versions": [
+        "0",
+        "3"
+      ]
+    },
+    {
+      "id": "rocket",
+      "title": "Rocket",
+      "path": "index.html",
+      "versions": [
+        "-hangar",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "sands",
+      "title": "Sands",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "sniper",
+      "title": "Sniper",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "spacesurvivor",
+      "title": "Spacesurvivor",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "terminal",
+      "title": "Terminal",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "the-plot-weaver",
+      "title": "The-plot-weaver",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "tile-clicker",
+      "title": "Tile-clicker",
+      "path": "index.html",
+      "versions": [
+        "-test",
+        "1"
+      ]
+    },
+    {
+      "id": "tower-defence",
+      "title": "Tower-defence",
+      "path": "index.html",
+      "versions": []
+    },
+    {
+      "id": "veinbreaker",
+      "title": "Veinbreaker",
+      "path": "index.html",
+      "versions": [
+        "2"
+      ]
+    },
+    {
+      "id": "water",
+      "title": "Water",
+      "path": "index.html",
+      "versions": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "wind",
+      "title": "Wind",
+      "path": "index.html",
+      "versions": []
+    }
+  ]
+}
