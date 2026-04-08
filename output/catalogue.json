@@ -1,5 +1,5 @@
 {
-  "time": 1775650858527,
+  "time": 1775655263888,
   "path": "games",
   "games": [
     {
@@ -117,7 +117,6 @@
       "title": "Dynasty",
       "path": "index.html",
       "versions": [
-        "1",
         "1_temp",
         "2",
         "2_temp",
