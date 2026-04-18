@@ -1,0 +1,1287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>THE VERTICAL HUB — M1</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600&display=swap");
+
+      :root {
+        --bg: #0a0c0f;
+        --bg2: #0f1215;
+        --bg3: #141820;
+        --panel: #111418;
+        --border: #1e2530;
+        --border2: #2a3040;
+        --text: #c8d4e0;
+        --text2: #6a7a8a;
+        --text3: #3a4a5a;
+        --accent: #4af0c0;
+        --accent2: #2a9070;
+        --warn: #f0c040;
+        --danger: #f04040;
+        --shaft: #1a2030;
+        --cable: #3a5070;
+        --elev: #1e2840;
+        --elev-border: #3a5890;
+        --green: #40c080;
+        --yellow: #f0c040;
+        --red: #f05050;
+        --credit: #60d0ff;
+        --floor-h: 72;
+        --shaft-w: 80px;
+        --shaft-x: 120px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Rajdhani", sans-serif;
+        font-size: 14px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* ── HUD ── */
+      #hud {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
+        padding: 0 16px;
+        height: 42px;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 100;
+      }
+
+      .hud-title {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        color: var(--accent);
+        margin-right: 24px;
+        text-transform: uppercase;
+      }
+
+      .hud-sep {
+        width: 1px;
+        height: 20px;
+        background: var(--border2);
+        margin: 0 16px;
+      }
+
+      .hud-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .hud-label {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        color: var(--text2);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .hud-val {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 13px;
+        color: var(--text);
+        min-width: 48px;
+      }
+
+      #hud-credits {
+        color: var(--credit);
+      }
+      #hud-pop {
+      }
+
+      .month-bar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        max-width: 200px;
+      }
+
+      .month-bar-bg {
+        flex: 1;
+        height: 4px;
+        background: var(--border2);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .month-bar-fill {
+        height: 100%;
+        background: var(--accent2);
+        border-radius: 2px;
+        transition: width 0.1s linear;
+        width: 0%;
+      }
+
+      .hud-right {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      #btn-shop {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        background: transparent;
+        border: 1px solid var(--border2);
+        color: var(--text2);
+        padding: 4px 12px;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: all 0.15s;
+      }
+      #btn-shop:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      #btn-spawn {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        background: var(--accent2);
+        border: 1px solid var(--accent);
+        color: var(--bg);
+        padding: 4px 12px;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: all 0.15s;
+        font-weight: 600;
+      }
+      #btn-spawn:hover {
+        background: var(--accent);
+      }
+
+      /* ── MAIN LAYOUT ── */
+      #main {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      /* ── BUILDING VIEWPORT ── */
+      #building-wrap {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        position: relative;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border2) transparent;
+      }
+
+      #building-wrap::-webkit-scrollbar {
+        width: 6px;
+      }
+      #building-wrap::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #building-wrap::-webkit-scrollbar-thumb {
+        background: var(--border2);
+        border-radius: 3px;
+      }
+
+      #building-canvas {
+        position: relative;
+        width: 100%;
+        min-height: 100%;
+      }
+
+      /* ── FLOORS ── */
+      .floor {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 72px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        transition: background 0.1s;
+      }
+      .floor:hover {
+        background: rgba(74, 240, 192, 0.025);
+      }
+      .floor.targeted {
+        background: rgba(74, 240, 192, 0.04);
+      }
+
+      .floor-label {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        color: var(--text3);
+        letter-spacing: 0.1em;
+        width: 56px;
+        text-align: right;
+        padding-right: 10px;
+        user-select: none;
+      }
+
+      /* shaft area */
+      .floor-shaft {
+        width: 80px;
+        height: 100%;
+        background: var(--shaft);
+        border-right: 1px solid var(--border2);
+        border-left: 1px solid var(--border2);
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      /* target indicator dot */
+      .target-dot {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 6px;
+        height: 6px;
+        background: var(--accent);
+        border-radius: 50%;
+        display: none;
+        box-shadow: 0 0 8px var(--accent);
+      }
+      .floor.targeted .target-dot {
+        display: block;
+      }
+
+      /* passenger queue area */
+      .floor-queue {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding-left: 12px;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .passenger-box {
+        width: 32px;
+        height: 32px;
+        border-width: 1.5px;
+        border-style: solid;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Share Tech Mono", monospace;
+        font-size: 11px;
+        font-weight: bold;
+        position: relative;
+        transition:
+          border-color 0.5s,
+          color 0.5s;
+        flex-shrink: 0;
+      }
+
+      .passenger-box.green {
+        border-color: var(--green);
+        color: var(--green);
+      }
+      .passenger-box.yellow {
+        border-color: var(--yellow);
+        color: var(--yellow);
+      }
+      .passenger-box.red {
+        border-color: var(--red);
+        color: var(--red);
+        animation: rage-pulse 0.4s ease-in-out infinite alternate;
+      }
+
+      @keyframes rage-pulse {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0.4;
+        }
+      }
+
+      /* ── ELEVATOR CANVAS ── */
+      #elev-canvas {
+        position: absolute;
+        top: 0;
+        left: 56px; /* align to shaft column */
+        width: 80px;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      /* ── SIDEBAR ── */
+      #sidebar {
+        width: 200px;
+        background: var(--panel);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        overflow-y: auto;
+      }
+
+      .sidebar-section {
+        border-bottom: 1px solid var(--border);
+        padding: 12px;
+      }
+
+      .sidebar-title {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.2em;
+        color: var(--text3);
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+
+      .status-key {
+        font-size: 11px;
+        color: var(--text2);
+        font-family: "Share Tech Mono", monospace;
+      }
+
+      .status-val {
+        font-size: 11px;
+        color: var(--text);
+        font-family: "Share Tech Mono", monospace;
+      }
+
+      .status-val.active {
+        color: var(--accent);
+      }
+      .status-val.warn {
+        color: var(--warn);
+      }
+
+      .cmd-queue-display {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+        margin-top: 4px;
+      }
+
+      .cmd-chip {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        border: 1px solid var(--border2);
+        color: var(--text2);
+        padding: 2px 5px;
+        border-radius: 2px;
+      }
+      .cmd-chip.active {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .log-entry {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        color: var(--text2);
+        line-height: 1.6;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        padding: 2px 0;
+      }
+      .log-entry.good {
+        color: var(--green);
+      }
+      .log-entry.bad {
+        color: var(--red);
+      }
+      .log-entry.info {
+        color: var(--accent);
+      }
+
+      /* ── SHOP MODAL ── */
+      #shop-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(5, 8, 12, 0.85);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+      }
+      #shop-overlay.open {
+        display: flex;
+      }
+
+      #shop-modal {
+        background: var(--panel);
+        border: 1px solid var(--border2);
+        width: 320px;
+        padding: 24px;
+        position: relative;
+      }
+
+      .shop-title {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 12px;
+        letter-spacing: 0.2em;
+        color: var(--accent);
+        text-transform: uppercase;
+        margin-bottom: 20px;
+      }
+
+      .shop-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid var(--border);
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .shop-item:hover {
+        border-color: var(--accent2);
+        background: rgba(74, 240, 192, 0.03);
+      }
+      .shop-item:active {
+        background: rgba(74, 240, 192, 0.07);
+      }
+
+      .shop-item-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+      }
+      .shop-item-desc {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        color: var(--text2);
+        margin-top: 2px;
+      }
+      .shop-item-cost {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 12px;
+        color: var(--credit);
+      }
+      .shop-item.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      #shop-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        color: var(--text2);
+        cursor: pointer;
+        background: none;
+        border: none;
+        letter-spacing: 0.1em;
+      }
+      #shop-close:hover {
+        color: var(--text);
+      }
+
+      /* ── MONEY POP ── */
+      .money-pop {
+        position: fixed;
+        font-family: "Share Tech Mono", monospace;
+        font-size: 13px;
+        color: var(--credit);
+        pointer-events: none;
+        z-index: 300;
+        animation: money-float 1.5s ease-out forwards;
+      }
+      @keyframes money-float {
+        0% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-48px);
+        }
+      }
+
+      /* ── PING ANIMATION (elevator pulsing) done in canvas ── */
+
+      /* ── SCROLL HINT ── */
+      .scroll-hint {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        color: var(--text3);
+        letter-spacing: 0.1em;
+        pointer-events: none;
+        animation: hint-fade 3s ease-out 2s forwards;
+        opacity: 0;
+        animation-fill-mode: both;
+        animation-delay: 1s;
+      }
+      @keyframes hint-fade {
+        0% {
+          opacity: 0;
+        }
+        20% {
+          opacity: 1;
+        }
+        80% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-title">VERTICAL HUB</div>
+      <div class="hud-sep"></div>
+      <div class="hud-item">
+        <span class="hud-label">CREDITS</span>
+        <span class="hud-val" id="hud-credits">0</span>
+      </div>
+      <div class="hud-sep"></div>
+      <div class="hud-item">
+        <span class="hud-label">POP</span>
+        <span class="hud-val" id="hud-pop">0/10</span>
+      </div>
+      <div class="hud-sep"></div>
+      <div class="hud-item month-bar-wrap">
+        <span class="hud-label">MONTH</span>
+        <div class="month-bar-bg">
+          <div class="month-bar-fill" id="month-bar"></div>
+        </div>
+        <span
+          class="hud-val"
+          id="hud-day"
+          style="font-size: 10px; min-width: 36px"
+          >D1</span
+        >
+      </div>
+      <div class="hud-right">
+        <button id="btn-spawn">+ SPAWN</button>
+        <button id="btn-shop">SHOP</button>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div id="main">
+      <div id="building-wrap">
+        <div id="building-canvas"></div>
+        <canvas id="elev-canvas"></canvas>
+      </div>
+      <div id="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-title">ELEVATOR A</div>
+          <div class="status-row">
+            <span class="status-key">STATE</span>
+            <span class="status-val active" id="s-state">IDLE</span>
+          </div>
+          <div class="status-row">
+            <span class="status-key">FLOOR</span>
+            <span class="status-val" id="s-floor">0</span>
+          </div>
+          <div class="status-row">
+            <span class="status-key">LOAD</span>
+            <span class="status-val" id="s-load">0/1</span>
+          </div>
+          <div class="status-row">
+            <span class="status-key">SPEED</span>
+            <span class="status-val" id="s-speed">0.0</span>
+          </div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-title">CMD QUEUE</div>
+          <div class="cmd-queue-display" id="cmd-queue-display"></div>
+        </div>
+        <div class="sidebar-section" style="flex: 1">
+          <div class="sidebar-title">EVENT LOG</div>
+          <div id="event-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="shop-overlay">
+      <div id="shop-modal">
+        <div class="shop-title">// BUILDING SHOP</div>
+        <button id="shop-close">[ CLOSE ]</button>
+        <div class="shop-item" id="shop-floor">
+          <div>
+            <div class="shop-item-name">Add Floor</div>
+            <div class="shop-item-desc">Extend building by 1 level</div>
+          </div>
+          <div class="shop-item-cost">100 CR</div>
+        </div>
+        <div
+          class="shop-item"
+          id="shop-capacity"
+          style="opacity: 0.35; pointer-events: none"
+        >
+          <div>
+            <div class="shop-item-name">Upgrade Capacity</div>
+            <div class="shop-item-desc">+1 passenger slot [M2]</div>
+          </div>
+          <div class="shop-item-cost">250 CR</div>
+        </div>
+        <div
+          class="shop-item"
+          id="shop-speed"
+          style="opacity: 0.35; pointer-events: none"
+        >
+          <div>
+            <div class="shop-item-name">Turbo Drive</div>
+            <div class="shop-item-desc">+50% elevator speed [M2]</div>
+          </div>
+          <div class="shop-item-cost">400 CR</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-hint">↓ SCROLL TO VIEW UPPER FLOORS</div>
+
+    <script>
+      // ─────────────────────────────────────────────
+      //  GAME STATE
+      // ─────────────────────────────────────────────
+      const FLOOR_H = 72;
+      const SHAFT_OFFSET_X = 56; // px from left of building-wrap
+      const SHAFT_W = 80;
+      const ELEV_W = 60;
+      const ELEV_H = 48;
+      const PATIENCE_DECAY = 6; // % per second
+      const MONTH_DURATION = 30; // seconds per month
+      const DOOR_OPEN_DURATION = 1.2; // seconds
+      const CREDIT_PER_DELIVERY = 80;
+      const FLOOR_COST = 100;
+
+      let credits = 0;
+      let gameTime = 0;
+      let monthTimer = 0;
+      let currentMonth = 1;
+      let dayDisplay = 1;
+      let floorCount = 3;
+      let passengerIdCounter = 0;
+      let passengers = []; // {id, spawnFloor, targetFloor, patience, state, el}
+      let logEntries = [];
+
+      // ─────────────────────────────────────────────
+      //  ELEVATOR STATE
+      // ─────────────────────────────────────────────
+      const elevator = {
+        y: 0, // world-y in pixels from bottom
+        targetY: 0,
+        velocity: 0,
+        state: "IDLE", // IDLE | MOVING | OPENING | LOADING
+        capacity: 1,
+        occupants: [],
+        commandQueue: [], // array of floor indices
+        doorTimer: 0,
+        pingPhase: 0, // for glow animation
+        // spring oscillation
+        springOffset: 0,
+        springVel: 0,
+      };
+
+      // ─────────────────────────────────────────────
+      //  DOM SETUP
+      // ─────────────────────────────────────────────
+      const buildingCanvas = document.getElementById("building-canvas");
+      const elevCanvas = document.getElementById("elev-canvas");
+      const ctx = elevCanvas.getContext("2d");
+      const buildingWrap = document.getElementById("building-wrap");
+
+      let floorEls = [];
+      let targetFloorIdx = null; // floor the elevator is targeting now
+
+      function buildingTotalHeight() {
+        return floorCount * FLOOR_H;
+      }
+
+      // Floor Y (top of floor) in DOM coordinates (0 = top)
+      function floorDomY(floorIdx) {
+        return (floorCount - 1 - floorIdx) * FLOOR_H;
+      }
+
+      // World Y (px from bottom) for a floor
+      function floorWorldY(floorIdx) {
+        return floorIdx * FLOOR_H;
+      }
+
+      function rebuildFloors() {
+        buildingCanvas.innerHTML = "";
+        floorEls = [];
+        const totalH = buildingTotalHeight();
+        buildingCanvas.style.height = totalH + "px";
+
+        for (let i = 0; i < floorCount; i++) {
+          const fl = document.createElement("div");
+          fl.className = "floor";
+          fl.style.top = floorDomY(i) + "px";
+          fl.dataset.floor = i;
+
+          fl.innerHTML = `
+      <div class="floor-label">FL ${i}</div>
+      <div class="floor-shaft">
+        <div class="target-dot"></div>
+      </div>
+      <div class="floor-queue" id="queue-${i}"></div>
+    `;
+
+          fl.addEventListener("click", () => onFloorClick(i));
+          buildingCanvas.appendChild(fl);
+          floorEls.push(fl);
+        }
+
+        // Reattach canvas
+        elevCanvas.style.position = "absolute";
+        elevCanvas.style.top = "0";
+        elevCanvas.style.left = SHAFT_OFFSET_X + "px";
+        elevCanvas.style.width = SHAFT_W + "px";
+        elevCanvas.style.pointerEvents = "none";
+        elevCanvas.style.zIndex = "10";
+        elevCanvas.width = SHAFT_W;
+        elevCanvas.height = totalH;
+        buildingCanvas.appendChild(elevCanvas);
+
+        syncElevatorToWorld();
+      }
+
+      function syncElevatorToWorld() {
+        // scroll to bottom (FL 0) on init
+        buildingWrap.scrollTop = buildingWrap.scrollHeight;
+      }
+
+      // ─────────────────────────────────────────────
+      //  FLOOR CLICK → COMMAND QUEUE
+      // ─────────────────────────────────────────────
+      function onFloorClick(floorIdx) {
+        // Don't double-queue
+        if (elevator.commandQueue.includes(floorIdx)) return;
+        elevator.commandQueue.push(floorIdx);
+        log(`CMD → FL ${floorIdx}`, "info");
+        updateCmdQueueDisplay();
+        processCommandQueue();
+      }
+
+      function processCommandQueue() {
+        if (elevator.commandQueue.length === 0) return;
+        if (elevator.state !== "IDLE") return;
+
+        const nextFloor = elevator.commandQueue[0];
+        const destY = floorWorldY(nextFloor);
+
+        if (Math.abs(elevator.y - destY) < 2) {
+          // Already there
+          elevator.commandQueue.shift();
+          updateCmdQueueDisplay();
+          triggerDoorOpen(nextFloor);
+          return;
+        }
+
+        elevator.state = "MOVING";
+        elevator.targetY = destY;
+        targetFloorIdx = nextFloor;
+        updateFloorTargets();
+        updateSidebar();
+      }
+
+      // ─────────────────────────────────────────────
+      //  ELEVATOR PHYSICS
+      // ─────────────────────────────────────────────
+      const MAX_SPEED = 140; // px/s
+      const ACCEL = 180; // px/s^2
+      const DECEL_DIST = 60; // px to start decelerating
+
+      function updateElevatorPhysics(dt) {
+        if (elevator.state !== "MOVING") {
+          // Spring settle
+          if (
+            Math.abs(elevator.springOffset) > 0.01 ||
+            Math.abs(elevator.springVel) > 0.01
+          ) {
+            const k = 80,
+              damping = 18;
+            const force =
+              -k * elevator.springOffset - damping * elevator.springVel;
+            elevator.springVel += force * dt;
+            elevator.springOffset += elevator.springVel * dt;
+            if (
+              Math.abs(elevator.springOffset) < 0.01 &&
+              Math.abs(elevator.springVel) < 0.01
+            ) {
+              elevator.springOffset = 0;
+              elevator.springVel = 0;
+            }
+          }
+          return;
+        }
+
+        const diff = elevator.targetY - elevator.y;
+        const dist = Math.abs(diff);
+        const dir = Math.sign(diff);
+
+        if (dist < 1.5) {
+          elevator.y = elevator.targetY;
+          elevator.velocity = 0;
+          elevator.state = "IDLE";
+          // Spring bounce on arrival
+          elevator.springVel = -dir * 22;
+
+          const arrivedFloor = elevator.commandQueue.shift();
+          updateCmdQueueDisplay();
+          targetFloorIdx = null;
+          updateFloorTargets();
+          triggerDoorOpen(arrivedFloor);
+          return;
+        }
+
+        let targetSpeed = MAX_SPEED;
+        if (dist < DECEL_DIST) {
+          targetSpeed = MAX_SPEED * (dist / DECEL_DIST);
+          targetSpeed = Math.max(targetSpeed, 20);
+        }
+
+        if (Math.abs(elevator.velocity) < targetSpeed) {
+          elevator.velocity += dir * ACCEL * dt;
+          if (Math.abs(elevator.velocity) > targetSpeed)
+            elevator.velocity = dir * targetSpeed;
+        } else {
+          elevator.velocity = dir * targetSpeed;
+        }
+
+        elevator.y += elevator.velocity * dt;
+        updateSidebar();
+      }
+
+      // ─────────────────────────────────────────────
+      //  DOOR OPEN / LOAD / UNLOAD
+      // ─────────────────────────────────────────────
+      function triggerDoorOpen(floorIdx) {
+        elevator.state = "OPENING";
+        elevator.doorTimer = DOOR_OPEN_DURATION;
+        targetFloorIdx = null;
+        updateFloorTargets();
+
+        // Unload passengers going here
+        const arriving = elevator.occupants.filter(
+          (p) => p.targetFloor === floorIdx,
+        );
+        arriving.forEach((p) => {
+          deliverPassenger(p);
+        });
+        elevator.occupants = elevator.occupants.filter(
+          (p) => p.targetFloor !== floorIdx,
+        );
+
+        // Load waiting passengers
+        const waiting = passengers.filter(
+          (p) =>
+            p.spawnFloor === floorIdx &&
+            p.state === "WAITING" &&
+            elevator.occupants.length < elevator.capacity,
+        );
+        waiting.forEach((p) => {
+          if (elevator.occupants.length < elevator.capacity) {
+            boardPassenger(p);
+          }
+        });
+
+        updateSidebar();
+
+        // After door-open, go back to IDLE and process next command
+        setTimeout(() => {
+          elevator.state = "IDLE";
+          updateSidebar();
+          processCommandQueue();
+        }, DOOR_OPEN_DURATION * 1000);
+      }
+
+      function boardPassenger(p) {
+        p.state = "IN_ELEVATOR";
+        elevator.occupants.push(p);
+        removePassengerFromQueue(p);
+        log(`P${p.id} boards → FL${p.targetFloor}`, "info");
+        updatePassengerCount();
+      }
+
+      function deliverPassenger(p) {
+        p.state = "ARRIVED";
+        removePassengerFromQueue(p);
+        const earned = CREDIT_PER_DELIVERY + Math.floor(p.patience / 2);
+        credits += earned;
+        updateHUD();
+        spawnMoneyPop(`+${earned} CR`);
+        log(`P${p.id} delivered. +${earned} CR`, "good");
+        passengers = passengers.filter((x) => x.id !== p.id);
+        updatePassengerCount();
+      }
+
+      function removePassengerFromQueue(p) {
+        const queueEl = document.getElementById(`queue-${p.spawnFloor}`);
+        if (p.el && p.el.parentNode === queueEl) queueEl.removeChild(p.el);
+      }
+
+      // ─────────────────────────────────────────────
+      //  PASSENGER LOGIC
+      // ─────────────────────────────────────────────
+      function spawnPassenger() {
+        if (floorCount < 2) return;
+        const id = ++passengerIdCounter;
+        const spawnFloor = 0;
+        // Random target above spawn
+        const maxTarget = floorCount - 1;
+        const targetFloor = 1 + Math.floor(Math.random() * maxTarget);
+
+        const p = {
+          id,
+          spawnFloor,
+          targetFloor,
+          patience: 100,
+          state: "WAITING",
+          el: null,
+        };
+
+        // DOM element
+        const box = document.createElement("div");
+        box.className = "passenger-box green";
+        box.textContent = targetFloor;
+        box.title = `Passenger ${id} → FL${targetFloor}`;
+        p.el = box;
+
+        const queueEl = document.getElementById(`queue-${spawnFloor}`);
+        if (queueEl) queueEl.appendChild(box);
+
+        passengers.push(p);
+        log(`P${id} spawned → FL${targetFloor}`, "info");
+        updatePassengerCount();
+      }
+
+      function updatePassengers(dt) {
+        for (let i = passengers.length - 1; i >= 0; i--) {
+          const p = passengers[i];
+          if (p.state !== "WAITING") continue;
+
+          p.patience -= PATIENCE_DECAY * dt;
+
+          // Update color
+          if (p.el) {
+            p.el.classList.remove("green", "yellow", "red");
+            if (p.patience > 70) p.el.classList.add("green");
+            else if (p.patience > 30) p.el.classList.add("yellow");
+            else p.el.classList.add("red");
+          }
+
+          if (p.patience <= 0) {
+            // Rage quit
+            removePassengerFromQueue(p);
+            passengers.splice(i, 1);
+            log(`P${p.id} rage quit!`, "bad");
+            updatePassengerCount();
+          }
+        }
+      }
+
+      // ─────────────────────────────────────────────
+      //  CANVAS RENDER
+      // ─────────────────────────────────────────────
+      function render() {
+        const totalH = buildingTotalHeight();
+        ctx.clearRect(0, 0, SHAFT_W, totalH);
+
+        // Cable
+        const elevDrawY = totalH - elevator.y - ELEV_H;
+        const elevCenterX = SHAFT_W / 2;
+        const elevTopY = elevDrawY + elevator.springOffset;
+
+        // Draw cable from top of canvas to top of elevator
+        const cableSpeed = Math.abs(elevator.velocity);
+        const cableAlpha = 0.25 + (cableSpeed / MAX_SPEED) * 0.5;
+        const cableW = 1 + (cableSpeed / MAX_SPEED) * 1;
+
+        ctx.save();
+        ctx.strokeStyle = `rgba(80, 130, 180, ${cableAlpha})`;
+        ctx.lineWidth = cableW;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(elevCenterX, 0);
+        ctx.lineTo(elevCenterX, elevTopY);
+        ctx.stroke();
+        ctx.restore();
+
+        // Elevator box
+        const ex = (SHAFT_W - ELEV_W) / 2;
+        const ey = elevTopY;
+
+        // Ping glow when needs input (has occupants, IDLE)
+        const needsInput =
+          elevator.state === "IDLE" &&
+          elevator.occupants.length > 0 &&
+          elevator.commandQueue.length === 0;
+        if (needsInput) {
+          elevator.pingPhase += 0.04;
+          const glowA = 0.15 + 0.2 * Math.abs(Math.sin(elevator.pingPhase));
+          ctx.save();
+          ctx.shadowColor = "#4af0c0";
+          ctx.shadowBlur = 12 + 8 * Math.abs(Math.sin(elevator.pingPhase));
+          ctx.strokeStyle = `rgba(74, 240, 192, ${glowA + 0.5})`;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(ex - 2, ey - 2, ELEV_W + 4, ELEV_H + 4);
+          ctx.restore();
+        } else {
+          elevator.pingPhase = 0;
+        }
+
+        // Elevator fill
+        const isMoving = elevator.state === "MOVING";
+        ctx.save();
+        ctx.fillStyle = isMoving ? "#1a2540" : "#1e2840";
+        ctx.strokeStyle = needsInput
+          ? "#4af0c0"
+          : isMoving
+            ? "#3a6aaa"
+            : "#2a4870";
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(ex, ey, ELEV_W, ELEV_H);
+        ctx.strokeRect(ex, ey, ELEV_W, ELEV_H);
+        ctx.restore();
+
+        // Door state indicator lines (when opening)
+        if (elevator.state === "OPENING") {
+          const openFrac = 1 - elevator.doorTimer / DOOR_OPEN_DURATION;
+          const doorW = (ELEV_W / 2) * openFrac;
+          ctx.save();
+          ctx.strokeStyle = "#4af0c0";
+          ctx.lineWidth = 1;
+          // left door opens left
+          ctx.strokeRect(ex, ey, doorW, ELEV_H);
+          // right door opens right
+          ctx.strokeRect(ex + ELEV_W - doorW, ey, doorW, ELEV_H);
+          ctx.restore();
+        }
+
+        // Occupant count label
+        const label = `${elevator.occupants.length}/${elevator.capacity}`;
+        ctx.save();
+        ctx.font = `bold 11px "Share Tech Mono", monospace`;
+        ctx.fillStyle = needsInput
+          ? "#4af0c0"
+          : elevator.occupants.length > 0
+            ? "#c8d4e0"
+            : "#3a5070";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, ex + ELEV_W / 2, ey + ELEV_H / 2);
+        ctx.restore();
+
+        // Floor number overlay (tiny, bottom right)
+        const curFloorLbl = `FL${Math.round(elevator.y / FLOOR_H)}`;
+        ctx.save();
+        ctx.font = `9px "Share Tech Mono", monospace`;
+        ctx.fillStyle = "#3a5a80";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(curFloorLbl, ex + ELEV_W - 2, ey + ELEV_H - 2);
+        ctx.restore();
+      }
+
+      // ─────────────────────────────────────────────
+      //  UPDATE MONTH / TIME
+      // ─────────────────────────────────────────────
+      function updateMonth(dt) {
+        monthTimer += dt;
+        gameTime += dt;
+        const frac = monthTimer / MONTH_DURATION;
+        document.getElementById("month-bar").style.width =
+          Math.min(frac * 100, 100) + "%";
+        dayDisplay = Math.floor(frac * 30) + 1;
+        document.getElementById("hud-day").textContent = `D${dayDisplay}`;
+
+        if (monthTimer >= MONTH_DURATION) {
+          monthTimer = 0;
+          currentMonth++;
+          const bonus = Math.floor(credits * 0.05) + 50;
+          credits += bonus;
+          spawnMoneyPop(`MONTH ${currentMonth}: +${bonus} CR`);
+          log(`Month ${currentMonth} — living fee: +${bonus} CR`, "good");
+          updateHUD();
+        }
+      }
+
+      // ─────────────────────────────────────────────
+      //  HUD / SIDEBAR / UI UPDATES
+      // ─────────────────────────────────────────────
+      function updateHUD() {
+        document.getElementById("hud-credits").textContent = credits;
+        updatePassengerCount();
+      }
+
+      function updatePassengerCount() {
+        const waiting = passengers.filter((p) => p.state === "WAITING").length;
+        const total = waiting + elevator.occupants.length;
+        document.getElementById("hud-pop").textContent = `${total}/10`;
+      }
+
+      function updateSidebar() {
+        document.getElementById("s-state").textContent = elevator.state;
+        document.getElementById("s-floor").textContent = Math.round(
+          elevator.y / FLOOR_H,
+        );
+        document.getElementById("s-load").textContent =
+          `${elevator.occupants.length}/${elevator.capacity}`;
+        document.getElementById("s-speed").textContent = Math.abs(
+          elevator.velocity,
+        ).toFixed(0);
+      }
+
+      function updateCmdQueueDisplay() {
+        const el = document.getElementById("cmd-queue-display");
+        el.innerHTML = "";
+        elevator.commandQueue.forEach((f, i) => {
+          const chip = document.createElement("div");
+          chip.className = "cmd-chip" + (i === 0 ? " active" : "");
+          chip.textContent = `FL${f}`;
+          el.appendChild(chip);
+        });
+        if (elevator.commandQueue.length === 0) {
+          el.innerHTML =
+            "<span style=\"font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3)\">— EMPTY —</span>";
+        }
+      }
+
+      function updateFloorTargets() {
+        floorEls.forEach((fl, i) => {
+          fl.classList.toggle("targeted", i === targetFloorIdx);
+        });
+      }
+
+      function log(msg, type = "") {
+        logEntries.unshift({ msg, type });
+        if (logEntries.length > 20) logEntries.pop();
+        const el = document.getElementById("event-log");
+        el.innerHTML = logEntries
+          .map((e) => `<div class="log-entry ${e.type}">${e.msg}</div>`)
+          .join("");
+      }
+
+      // ─────────────────────────────────────────────
+      //  MONEY POP
+      // ─────────────────────────────────────────────
+      function spawnMoneyPop(text) {
+        const el = document.createElement("div");
+        el.className = "money-pop";
+        el.textContent = text;
+        const x = 40 + Math.random() * 120;
+        const y = 80 + Math.random() * 40;
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1600);
+      }
+
+      // ─────────────────────────────────────────────
+      //  SHOP
+      // ─────────────────────────────────────────────
+      document.getElementById("btn-shop").addEventListener("click", () => {
+        updateShopUI();
+        document.getElementById("shop-overlay").classList.add("open");
+      });
+      document.getElementById("shop-close").addEventListener("click", () => {
+        document.getElementById("shop-overlay").classList.remove("open");
+      });
+      document.getElementById("shop-overlay").addEventListener("click", (e) => {
+        if (e.target === document.getElementById("shop-overlay"))
+          document.getElementById("shop-overlay").classList.remove("open");
+      });
+
+      document.getElementById("shop-floor").addEventListener("click", () => {
+        if (credits < FLOOR_COST) return;
+        credits -= FLOOR_COST;
+        floorCount++;
+        rebuildFloors();
+        updateHUD();
+        log(`Floor added. Now ${floorCount} floors.`, "good");
+        updateShopUI();
+        // scroll to bottom again
+        setTimeout(() => {
+          buildingWrap.scrollTop = buildingWrap.scrollHeight;
+        }, 50);
+      });
+
+      function updateShopUI() {
+        const floorItem = document.getElementById("shop-floor");
+        floorItem.classList.toggle("disabled", credits < FLOOR_COST);
+      }
+
+      // ─────────────────────────────────────────────
+      //  SPAWN BUTTON
+      // ─────────────────────────────────────────────
+      document
+        .getElementById("btn-spawn")
+        .addEventListener("click", spawnPassenger);
+
+      // ─────────────────────────────────────────────
+      //  MAIN LOOP
+      // ─────────────────────────────────────────────
+      let lastTime = null;
+
+      function gameLoop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+        lastTime = timestamp;
+
+        // Update door timer
+        if (elevator.state === "OPENING") {
+          elevator.doorTimer -= dt;
+          if (elevator.doorTimer < 0) elevator.doorTimer = 0;
+        }
+
+        updateElevatorPhysics(dt);
+        updatePassengers(dt);
+        updateMonth(dt);
+        updateSidebar();
+        render();
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      // ─────────────────────────────────────────────
+      //  INIT
+      // ─────────────────────────────────────────────
+      rebuildFloors();
+      updateHUD();
+      updateCmdQueueDisplay();
+      log("System online. Click floors to dispatch.", "info");
+      spawnPassenger(); // seed one passenger immediately
+
+      requestAnimationFrame(gameLoop);
+    </script>
+  </body>
+</html>

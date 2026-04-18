@@ -1,0 +1,1276 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vertical Hub — M1</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body,
+      html {
+        overflow: hidden;
+        background: #0f172a;
+        font-family: "Courier New", monospace;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      /* ── HUD ─────────────────────────────────────────────────────── */
+      #hud {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 44px;
+        background: rgba(15, 23, 42, 0.96);
+        border-bottom: 1px solid #1e3a5a;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        z-index: 100;
+        color: #94a3b8;
+        font-size: 12px;
+        gap: 0;
+        user-select: none;
+      }
+
+      .hud-title {
+        color: #38bdf8;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-right: 16px;
+        flex-shrink: 0;
+      }
+
+      .hud-sep {
+        width: 1px;
+        height: 20px;
+        background: #1e3a5a;
+        margin: 0 12px;
+        flex-shrink: 0;
+      }
+
+      .hud-field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .hud-lbl {
+        color: #334155;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .hud-val {
+        color: #e2e8f0;
+        font-size: 12px;
+        min-width: 36px;
+      }
+
+      #hud-credits {
+        color: #38bdf8;
+      }
+
+      .month-wrap {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .month-track {
+        width: 90px;
+        height: 3px;
+        background: #1e3a5a;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .month-fill {
+        height: 100%;
+        background: #22c55e;
+        width: 0%;
+        transition: width 0.12s linear;
+      }
+
+      .hud-right {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .btn {
+        font-family: "Courier New", monospace;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        padding: 5px 10px;
+        border: 1px solid #0e5a82;
+        background: rgba(56, 189, 248, 0.07);
+        color: #38bdf8;
+        transition:
+          border-color 0.15s,
+          color 0.15s,
+          background 0.15s;
+      }
+      .btn:hover {
+        background: rgba(56, 189, 248, 0.16);
+      }
+
+      /* ── PAUSED VEIL ─────────────────────────────────────────────── */
+      #pause-veil {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 90;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+      #pause-veil.on {
+        display: flex;
+      }
+      #pause-label {
+        color: #38bdf8;
+        font-size: 22px;
+        letter-spacing: 0.3em;
+        opacity: 0.75;
+      }
+
+      /* ── SHOP MODAL ──────────────────────────────────────────────── */
+      #shop-veil {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(5, 10, 20, 0.82);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+      }
+      #shop-veil.on {
+        display: flex;
+      }
+
+      #shop-box {
+        background: #0b1220;
+        border: 1px solid #1e3a5a;
+        width: 340px;
+      }
+
+      .shop-hd {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 13px 18px;
+        border-bottom: 1px solid #1e2d45;
+      }
+
+      .shop-ttl {
+        color: #38bdf8;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
+      .shop-x {
+        background: none;
+        border: none;
+        color: #334155;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+      }
+      .shop-x:hover {
+        color: #94a3b8;
+      }
+
+      .shop-bd {
+        padding: 12px 18px 16px;
+      }
+
+      .shop-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #1e2d45;
+        padding: 11px 13px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+      }
+      .shop-row:hover {
+        border-color: #22c55e;
+        background: rgba(34, 197, 94, 0.04);
+      }
+      .shop-row.locked {
+        opacity: 0.28;
+        pointer-events: none;
+      }
+      .shop-row.cant-afford {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+
+      .shop-rn {
+        color: #e2e8f0;
+        font-size: 13px;
+        margin-bottom: 3px;
+      }
+      .shop-rd {
+        color: #334155;
+        font-size: 10px;
+        letter-spacing: 0.05em;
+      }
+      .shop-rc {
+        color: #38bdf8;
+        font-size: 12px;
+        flex-shrink: 0;
+        margin-left: 12px;
+      }
+
+      .shop-note {
+        color: #1e3a5a;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-align: center;
+        padding: 6px 0 0;
+      }
+
+      /* ── SCROLL HINT ─────────────────────────────────────────────── */
+      #scroll-hint {
+        position: fixed;
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #1e3a5a;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        pointer-events: none;
+        opacity: 0;
+        animation: hint 4s ease-out 1.5s forwards;
+      }
+      @keyframes hint {
+        0% {
+          opacity: 0;
+        }
+        15% {
+          opacity: 1;
+        }
+        75% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-title">VERTICAL HUB</div>
+      <div class="hud-sep"></div>
+      <div class="hud-field">
+        <span class="hud-lbl">CR</span>
+        <span class="hud-val" id="hud-credits">0</span>
+      </div>
+      <div class="hud-sep"></div>
+      <div class="hud-field">
+        <span class="hud-lbl">POP</span>
+        <span class="hud-val" id="hud-pop">0/0</span>
+      </div>
+      <div class="hud-sep"></div>
+      <div class="hud-field month-wrap">
+        <span class="hud-lbl">MONTH</span>
+        <div class="month-track">
+          <div class="month-fill" id="month-bar"></div>
+        </div>
+        <span
+          class="hud-val"
+          id="hud-day"
+          style="font-size: 10px; min-width: 52px"
+          >D1 / M1</span
+        >
+      </div>
+      <div class="hud-right">
+        <button class="btn" id="btn-shop">SHOP</button>
+      </div>
+    </div>
+
+    <!-- Paused overlay -->
+    <div id="pause-veil">
+      <div id="pause-label">// PAUSED //</div>
+    </div>
+
+    <!-- Shop modal -->
+    <div id="shop-veil">
+      <div id="shop-box">
+        <div class="shop-hd">
+          <div class="shop-ttl">// BUILDING UPGRADES</div>
+          <button class="shop-x" id="shop-close">[ CLOSE ]</button>
+        </div>
+        <div class="shop-bd">
+          <div class="shop-row" id="shop-add-floor">
+            <div>
+              <div class="shop-rn">Add Floor</div>
+              <div class="shop-rd">
+                Extend building +1 residential level (cap +2)
+              </div>
+            </div>
+            <div class="shop-rc">100 CR</div>
+          </div>
+          <div class="shop-row locked">
+            <div>
+              <div class="shop-rn">Upgrade Capacity</div>
+              <div class="shop-rd">Elevator holds +1 passenger</div>
+            </div>
+            <div class="shop-rc">250 CR</div>
+          </div>
+          <div class="shop-row locked">
+            <div>
+              <div class="shop-rn">Turbo Drive</div>
+              <div class="shop-rd">+50% elevator speed</div>
+            </div>
+            <div class="shop-rc">400 CR</div>
+          </div>
+          <div class="shop-note">MILESTONE 2 UNLOCKS MORE UPGRADES</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="scroll-hint">SCROLL TO VIEW UPPER FLOORS</div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+      // ────────────────────────────────────────────────────────────────
+      //  WORLD CONFIG
+      // ────────────────────────────────────────────────────────────────
+      const WORLD_CONFIG = {
+        buildingConfig: {
+          arrivalRate: 0.25, // new arrivals per second
+          activityRate: 0.33, // resident activity probability per second per person
+          personHeight: 25,
+          floorHeight: 100,
+          floorLineHeight: 4,
+          roofLineHeight: 8,
+          shaftWidth: 50,
+          cabWidth: 40,
+          cabHeight: 50,
+          monthDuration: 30, // real seconds per in-game month
+          floorAddCost: 100, // credits to buy a new floor
+        },
+        floorsConfig: [
+          { id: 0, type: "LOBBY", capacity: 0 },
+          { id: 1, type: "RESIDENTIAL", capacity: 2 },
+          { id: 2, type: "RESIDENTIAL", capacity: 2 },
+        ],
+        elevatorsConfig: [
+          {
+            id: "E1",
+            startFloor: 0,
+            capacity: 1,
+            maxSpeed: 0.33, // floors per second
+            doorsTime: 1, // seconds
+            loadUnloadTime: 1, // seconds
+          },
+        ],
+      };
+
+      // ────────────────────────────────────────────────────────────────
+      //  RENDERER
+      // ────────────────────────────────────────────────────────────────
+      class Renderer {
+        constructor(canvas, building) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext("2d");
+          this.building = building;
+          this.colors = {
+            roof: "#292d32",
+            floorLine: "#475569",
+            building: "#131824",
+            shaft: "#06101d",
+            elevator: "#333333",
+            elevatorDoors: "#cbd5e1",
+            elevatorPulse: "#38bdf8",
+            text: "#ffffff",
+            patienceHigh: "#22c55e",
+            patienceMed: "#eab308",
+            patienceLow: "#ef4444",
+            accent: "#4af0c0",
+          };
+        }
+
+        draw(engine) {
+          const { ctx, canvas, building, colors } = this;
+          const {
+            floorLineHeight,
+            roofLineHeight,
+            shaftWidth,
+            cabWidth,
+            cabHeight,
+            personHeight,
+          } = engine.config;
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          const buildingHeight =
+            building.floors.length * (building.floorHeight + floorLineHeight);
+          const buildingHeightY = canvas.height - buildingHeight;
+
+          // ── Camera transform ─────────────────────────────────────────
+          // scrollY > 0 means we've scrolled UP to see higher floors.
+          // translate(0, -scrollY) shifts canvas content upward, revealing higher floors.
+          ctx.save();
+          ctx.translate(0, engine.camera.scrollY);
+
+          ctx.fillStyle = colors.building;
+          ctx.fillRect(0, buildingHeightY, canvas.width, buildingHeight);
+
+          // ── ELEVATORS ───────────────────────────────────────────────
+          building.elevators.forEach((el, i) => {
+            const elevatorMiddle = i * 70 + 70;
+            const floorLineY =
+              canvas.height -
+              el.currentFloorPos * (building.floorHeight + floorLineHeight) -
+              floorLineHeight;
+            // springOffset is visual-only (pixels). Positive = shifted downward.
+            const cabTopY = floorLineY - cabHeight + (el.springOffset || 0);
+
+            // Shaft
+            ctx.fillStyle = colors.shaft;
+            ctx.fillRect(
+              elevatorMiddle - shaftWidth / 2,
+              buildingHeightY,
+              shaftWidth,
+              buildingHeight,
+            );
+
+            // Cable — thickness and brightness scale with speed
+            const speedFrac =
+              el.state === "MOVING"
+                ? Math.min(
+                    Math.abs(el.currentFloorPos - el.targetFloorIndex) / 2,
+                    1,
+                  )
+                : 0;
+            ctx.lineWidth = 1 + speedFrac;
+            ctx.strokeStyle = `rgba(71,85,105,${0.4 + speedFrac * 0.5})`;
+            ctx.beginPath();
+            ctx.moveTo(elevatorMiddle, buildingHeightY);
+            ctx.lineTo(elevatorMiddle, cabTopY);
+            ctx.stroke();
+
+            // Target-floor indicators (call visualization — one diamond per queued floor)
+            el.occupants.forEach((person) => {
+              const indicatorY =
+                canvas.height -
+                person.targetFloor * (building.floorHeight + floorLineHeight) -
+                floorLineHeight -
+                building.floorHeight / 2;
+
+              ctx.fillStyle = colors.accent;
+              ctx.beginPath();
+              ctx.moveTo(elevatorMiddle, indicatorY - 5);
+              ctx.lineTo(elevatorMiddle + 5, indicatorY);
+              ctx.lineTo(elevatorMiddle, indicatorY + 5);
+              ctx.lineTo(elevatorMiddle - 5, indicatorY);
+              ctx.closePath();
+              ctx.fill();
+            });
+
+            // Ping glow when idle with passengers and no queued floors
+            const needsInput =
+              el.state === "IDLE" &&
+              el.occupants.length > 0 &&
+              el.floorsQueue.length === 0;
+            if (needsInput) {
+              const pulse = Math.sin(Date.now() / 200) * 5;
+              ctx.shadowBlur = 8 + pulse;
+              ctx.shadowColor = colors.elevatorPulse;
+            }
+
+            // Cab
+            ctx.fillStyle = colors.elevator;
+            ctx.fillRect(
+              elevatorMiddle - cabWidth / 2,
+              cabTopY,
+              cabWidth,
+              cabHeight,
+            );
+            ctx.shadowBlur = 0;
+
+            // Doors animation
+            if (
+              el.state === "OPENING" ||
+              el.state === "LOAD_UNLOAD" ||
+              el.state === "CLOSING"
+            ) {
+              const doorProgress =
+                el.state === "OPENING"
+                  ? el.doorTimer / el.doorsTime
+                  : el.state === "CLOSING"
+                    ? 1 - el.doorTimer / el.doorsTime
+                    : 1;
+              const doorWidth = cabWidth * doorProgress;
+              ctx.fillStyle = colors.elevatorDoors;
+              ctx.fillRect(
+                elevatorMiddle - doorWidth / 2,
+                cabTopY,
+                doorWidth,
+                cabHeight,
+              );
+            }
+
+            // Cab label: destination when occupied, load ratio when empty
+            const label =
+              el.occupants.length > 0
+                ? `>${el.occupants[0].targetFloor}`
+                : `${el.occupants.length}/${el.capacity}`;
+            ctx.fillStyle = needsInput
+              ? colors.accent
+              : el.occupants.length > 0
+                ? "#e2e8f0"
+                : "#334155";
+            ctx.font = "bold 12px Courier New";
+            ctx.fillStyle = colors.text;
+            ctx.textAlign = "center";
+            ctx.fillText(label, elevatorMiddle, cabTopY + cabHeight / 2 + 5);
+          });
+
+          // ── FLOORS ──────────────────────────────────────────────────
+          building.floors.forEach((floor, floorIndex) => {
+            const floorLineY =
+              canvas.height -
+              floorIndex * (building.floorHeight + floorLineHeight) -
+              floorLineHeight;
+
+            // Floor line
+            ctx.fillStyle = colors.floorLine;
+            ctx.fillRect(0, floorLineY, canvas.width, floorLineHeight);
+
+            // Roof line (topmost floor)
+            if (floorIndex === building.floors.length - 1) {
+              const roofY =
+                floorLineY - building.floorHeight - roofLineHeight / 2;
+              ctx.fillStyle = colors.roof;
+              ctx.fillRect(0, roofY, canvas.width, roofLineHeight);
+            }
+
+            // Floor label
+            const midY = floorLineY - building.floorHeight / 2;
+            ctx.textAlign = "left";
+            ctx.fillStyle = colors.text;
+            ctx.font = "11px Courier New";
+            ctx.fillText(`FL ${floor.index}`, 10, midY);
+
+            // Capacity indicator (residential floors only)
+            if (floor.capacity > 0) {
+              ctx.fillStyle = colors.text;
+              ctx.font = "10px Courier New";
+              ctx.textAlign = "right";
+              ctx.fillText(
+                `${floor.residents}/${floor.capacity}`,
+                canvas.width - 10,
+                midY + 4,
+              );
+            }
+
+            // Waiting queue
+            floor.waitingQueue.forEach((person, qi) => {
+              this.drawPerson(
+                person,
+                100 + qi * 35,
+                floorLineY - personHeight,
+                personHeight,
+              );
+            });
+          });
+
+          ctx.restore(); // end camera transform
+
+          // ── MONEY POPS (screen-space — drawn after camera restore) ──
+          engine.moneyPops.forEach((pop) => {
+            ctx.globalAlpha = pop.alpha;
+            ctx.fillStyle = pop.color || "#38bdf8";
+            ctx.font = "bold 13px Courier New";
+            ctx.textAlign = "center";
+            ctx.fillText(pop.text, pop.x, pop.y);
+          });
+          ctx.globalAlpha = 1;
+        }
+
+        drawPerson(person, x, y, personHeight) {
+          const ctx = this.ctx;
+
+          // Base fill (blue)
+          ctx.fillStyle = "#0020ed";
+          ctx.fillRect(x, y, 15, personHeight);
+
+          // Patience drain overlay: red grows from top as patience falls
+          ctx.fillStyle = this.colors.patienceLow;
+          ctx.fillRect(x, y, 15, (1 - person.patience / 100) * personHeight);
+
+          // Target floor label
+          ctx.fillStyle = "#fff";
+          ctx.font = "10px Courier New";
+          ctx.textAlign = "center";
+          ctx.fillText(person.targetFloor, x + 8, y + personHeight / 2 + 4);
+        }
+      }
+
+      // ────────────────────────────────────────────────────────────────
+      //  GAME ENGINE
+      // ────────────────────────────────────────────────────────────────
+      class GameEngine {
+        constructor({ buildingConfig, floorsConfig, elevatorsConfig }) {
+          this.config = buildingConfig;
+
+          this.building = new Building(
+            floorsConfig,
+            elevatorsConfig,
+            buildingConfig,
+          );
+
+          this.canvas = document.getElementById("gameCanvas");
+          this.renderer = new Renderer(this.canvas, this.building);
+
+          this.credits = 10000;
+          this.lastTime = performance.now();
+
+          this.arrivalTimer = 0;
+
+          this.isPaused = false;
+
+          // Month / time system
+          this.monthTimer = 0;
+          this.currentMonth = 1;
+
+          // Camera (viewport): scrollY > 0 = scrolled up to see higher floors
+          this.camera = { scrollY: 0 };
+
+          // Money pop particles (screen-space)
+          this.moneyPops = [];
+
+          this._initListeners();
+          this._initShop();
+          this._updateHUD();
+        }
+
+        // ── LISTENERS ────────────────────────────────────────────────
+        resize() {
+          this.canvas.width = window.innerWidth;
+          this.canvas.height = window.innerHeight;
+        }
+
+        _initListeners() {
+          window.addEventListener("resize", () => this.resize());
+
+          window.addEventListener("keydown", (e) => {
+            if (e.key === " ") {
+              this.isPaused = !this.isPaused;
+            }
+          });
+
+          this.canvas.addEventListener("mousedown", (e) =>
+            this._handleFloorClick(e),
+          );
+
+          // Camera scroll: wheel up → see higher floors
+          this.canvas.addEventListener(
+            "wheel",
+            (e) => {
+              e.preventDefault();
+              const buildingH =
+                this.building.floors.length *
+                  (this.config.floorHeight + this.config.floorLineHeight) +
+                this.config.roofLineHeight;
+              const maxScroll = Math.max(
+                0,
+                buildingH - this.canvas.height + 120,
+              );
+              this.camera.scrollY = Math.max(
+                0,
+                Math.min(this.camera.scrollY + e.deltaY * 0.6, maxScroll),
+              );
+            },
+            { passive: false },
+          );
+
+          this.resize();
+        }
+
+        _handleFloorClick(e) {
+          const rect = this.canvas.getBoundingClientRect();
+          const mouseY = e.clientY - rect.top;
+          // Adjust for camera: translate(0,-scrollY) means screen_y = canvas_y - scrollY
+          const canvasY = this.canvas.height - mouseY;
+          const logicalY = canvasY + this.camera.scrollY;
+          const floorIdx = this.building.getFloorAtY(logicalY);
+
+          if (floorIdx < 0 || floorIdx >= this.building.floors.length) return;
+
+          // TODO: pick nearest elevator instead of always E1
+          this.building.elevators[0].processCall(floorIdx);
+        }
+
+        // ── SHOP ─────────────────────────────────────────────────────
+        _initShop() {
+          const veil = document.getElementById("shop-veil");
+          const openShop = () => {
+            this._refreshShopState();
+            veil.classList.add("on");
+          };
+
+          document
+            .getElementById("btn-shop")
+            .addEventListener("click", openShop);
+          document
+            .getElementById("shop-close")
+            .addEventListener("click", () => veil.classList.remove("on"));
+          veil.addEventListener("click", (e) => {
+            if (e.target === veil) veil.classList.remove("on");
+          });
+
+          document
+            .getElementById("shop-add-floor")
+            .addEventListener("click", () => {
+              if (this.credits < this.config.floorAddCost) return;
+              this.credits -= this.config.floorAddCost;
+              this.building.addFloor();
+              this._spawnPop(
+                `+1 FL`,
+                this.canvas.width / 2,
+                this.canvas.height / 2,
+                "#4af0c0",
+              );
+              this._updateHUD();
+              this._refreshShopState();
+            });
+        }
+
+        _refreshShopState() {
+          const row = document.getElementById("shop-add-floor");
+          row.classList.toggle(
+            "cant-afford",
+            this.credits < this.config.floorAddCost,
+          );
+        }
+
+        // ── MAIN LOOP ────────────────────────────────────────────────
+        update(time) {
+          const dt = (time - this.lastTime) / 1000; // seconds
+          this.lastTime = time;
+
+          if (!this.isPaused) {
+            this._spawnPassengers(dt);
+
+            this.building.elevators.forEach((el) => {
+              el.update(dt);
+              if (el.state === "READY_TO_LOAD_UNLOAD") {
+                this._processLoadUnload(el);
+              }
+            });
+
+            this._updatePatience(dt);
+            this._updateMonth(dt);
+            this._updateMoneyPops(dt);
+            this._updateHUD();
+          }
+
+          this.renderer.draw(this);
+          requestAnimationFrame((t) => this.update(t));
+        }
+
+        // ── SPAWNING ─────────────────────────────────────────────────
+        _spawnPassengers(dt) {
+          if (this.building.currentPopulation < this.building.capacity) {
+            this.arrivalTimer += this.config.arrivalRate * dt;
+            while (this.arrivalTimer >= 1.0) {
+              this._spawnOneArrival();
+              this.arrivalTimer -= 1;
+            }
+          }
+          this._handleSpawnActivity(dt);
+        }
+
+        _spawnOneArrival() {
+          const available = this.building.getAvailableFloors();
+          if (!available.length) return;
+
+          const targetFloor =
+            available[Math.floor(Math.random() * available.length)];
+          targetFloor.reserve();
+          this.building.floors[0].waitingQueue.push(
+            new Person(
+              Date.now() + Math.random(),
+              0,
+              targetFloor.index,
+              "ARRIVING",
+            ),
+          );
+        }
+
+        _handleSpawnActivity(dt) {
+          if (this.building.currentPopulation === 0) return;
+
+          for (const f of this.building.floors) {
+            for (const [id, person] of f.presence) {
+              // Per-person independent probability — avoids the shared-timer burst bug
+              if (Math.random() < this.config.activityRate * dt) {
+                const isMovingOut = f.index !== 0 && Math.random() < 0.2;
+                if (isMovingOut) {
+                  person.depart();
+                } else {
+                  person.visit(f.index, this.building.floors.length);
+                }
+                f.removePhysicalPresence(id);
+                f.waitingQueue.push(person);
+              }
+            }
+          }
+        }
+
+        // ── LOAD / UNLOAD ────────────────────────────────────────────
+        _processLoadUnload(el) {
+          el.startLoadUnload();
+
+          const floorIdx = el.currentFloor;
+          const floor = this.building.floors[floorIdx];
+          if (!floor) {
+            el.completeLoadUnload();
+            return;
+          }
+
+          // 1. Unload passengers whose destination is this floor
+          el.occupants = el.occupants.filter((person) => {
+            if (person.targetFloor !== floorIdx) return true; // keep in elevator
+
+            if (person.purpose === "ARRIVING") {
+              const moved = floor.tryToMoveIn(person);
+              if (!moved) {
+                // No space — redirect to lobby
+                person.leave();
+                return true;
+              }
+              person.handleSuccessfulArrival(floor.index);
+            } else if (person.purpose === "VISITING") {
+              floor.addPhysicalPresence(person);
+            } else if (person.purpose === "DEPARTING") {
+              const homeFloor = this.building.floors[person.homeFloor];
+              if (homeFloor) {
+                floor.moveOut();
+              }
+            }
+
+            this.credits += 50;
+            // Pop appears near the elevator shaft (screen-space, below HUD safe area)
+            const approxScreenY = Math.max(
+              60,
+              this.canvas.height -
+                el.currentFloorPos * this.building.floorHeight -
+                80 -
+                this.camera.scrollY,
+            );
+            this._spawnPop("+50 CR", 70, approxScreenY);
+            return false;
+          });
+
+          // 2. Load waiting passengers (manual dispatch: player clicks target floor)
+          while (
+            el.occupants.length < el.capacity &&
+            floor.waitingQueue.length > 0
+          ) {
+            const p = floor.waitingQueue.shift();
+            p.state = "IN_ELEVATOR";
+            el.occupants.push(p);
+            // M3 upgrade: auto-dispatch target floor → el.processCall(p.targetFloor)
+          }
+
+          setTimeout(() => el.completeLoadUnload(), el.loadUnloadTime * 1000);
+        }
+
+        // ── PATIENCE ────────────────────────────────────────────────
+        _updatePatience(dt) {
+          this.building.floors.forEach((f) => {
+            for (let i = f.waitingQueue.length - 1; i >= 0; i--) {
+              const p = f.waitingQueue[i];
+              p.update(dt);
+              if (p.patience <= 0) {
+                this._handlePatienceBreak(p, f);
+                f.waitingQueue.splice(i, 1);
+              }
+            }
+          });
+        }
+
+        _handlePatienceBreak(person, currentFloor) {
+          switch (person.purpose) {
+            case "ARRIVING": {
+              const tf = this.building.floors[person.targetFloor];
+              if (tf) tf.unreserve();
+              this.credits = Math.max(0, this.credits - 100);
+              this._spawnPop("-100 CR", 120, this.canvas.height / 2, "#ef4444");
+              break;
+            }
+            case "VISITING":
+              currentFloor.addPhysicalPresence(person);
+              person.handleUnsuccessfulVisit();
+              break;
+            case "DEPARTING":
+              currentFloor.addPhysicalPresence(person);
+              person.handleUnsuccessfulDeparture();
+              break;
+          }
+        }
+
+        // ── MONTH / RENT CYCLE ───────────────────────────────────────
+        _updateMonth(dt) {
+          this.monthTimer += dt;
+          const progress = Math.min(
+            this.monthTimer / this.config.monthDuration,
+            1,
+          );
+          const day = Math.floor(progress * 30) + 1;
+
+          document.getElementById("month-bar").style.width =
+            progress * 100 + "%";
+          document.getElementById("hud-day").textContent =
+            `D${day} / M${this.currentMonth}`;
+
+          if (this.monthTimer >= this.config.monthDuration) {
+            this.monthTimer = 0;
+            this.currentMonth++;
+
+            // Monthly Living Fee: base + population-satisfaction bonus
+            const popFraction =
+              this.building.currentPopulation /
+              Math.max(1, this.building.capacity);
+            const rent = Math.floor(60 + popFraction * 180);
+            this.credits += rent;
+
+            this._spawnPop(
+              `MONTH ${this.currentMonth - 1}: +${rent} CR`,
+              this.canvas.width / 2,
+              90,
+              "#22c55e",
+            );
+          }
+        }
+
+        // ── MONEY POPS ───────────────────────────────────────────────
+        _spawnPop(text, x, y, color = "#38bdf8") {
+          this.moneyPops.push({
+            text,
+            x: x + (Math.random() - 0.5) * 40,
+            y: Math.max(60, y),
+            color,
+            alpha: 1,
+            life: 1.8,
+            maxLife: 1.8,
+          });
+        }
+
+        _updateMoneyPops(dt) {
+          for (let i = this.moneyPops.length - 1; i >= 0; i--) {
+            const p = this.moneyPops[i];
+            p.y -= 40 * dt; // float upward
+            p.life -= dt;
+            p.alpha = Math.max(0, p.life / p.maxLife);
+            if (p.life <= 0) this.moneyPops.splice(i, 1);
+          }
+        }
+
+        // ── HUD ──────────────────────────────────────────────────────
+        _updateHUD() {
+          document.getElementById("hud-credits").textContent = this.credits;
+          document.getElementById("hud-pop").textContent =
+            `${this.building.currentPopulation}/${this.building.capacity}`;
+          document
+            .getElementById("pause-veil")
+            .classList.toggle("on", this.isPaused);
+        }
+      }
+
+      // ────────────────────────────────────────────────────────────────
+      //  PERSON
+      // ────────────────────────────────────────────────────────────────
+      class Person {
+        constructor(id, startFloor, targetFloor, purpose) {
+          this.id = id;
+          this.targetFloor = targetFloor;
+          this.homeFloor = null;
+          this.patience = 100;
+          this.patienceDecay = 10; // % per second
+          this.state = "WAITING";
+          this.purpose = purpose;
+        }
+
+        update(dt) {
+          if (this.state === "WAITING") {
+            this.patience -= this.patienceDecay * dt;
+          }
+        }
+
+        leave() {
+          this.targetFloor = 0;
+          this.purpose = "LEAVING";
+        }
+
+        visit(currentFloorIndex, floorsCount) {
+          let target;
+          do {
+            target = Math.floor(Math.random() * floorsCount);
+          } while (target === currentFloorIndex);
+          this.targetFloor = target;
+          this.purpose = "VISITING";
+          this.state = "WAITING";
+        }
+
+        depart() {
+          this.targetFloor = 0;
+          this.purpose = "DEPARTING";
+          this.state = "WAITING";
+        }
+
+        handleSuccessfulArrival(homeFloor) {
+          this.homeFloor = homeFloor;
+          this.purpose = "STAYING";
+          this.state = "ARRIVED";
+        }
+        handleUnsuccessfulDeparture() {
+          this.purpose = "STAYING";
+          this.isAngry = true;
+        }
+        handleUnsuccessfulVisit() {
+          this.state = "ARRIVED";
+          this.purpose = "STAYING";
+          this.patience = 50;
+        }
+      }
+
+      // ────────────────────────────────────────────────────────────────
+      //  FLOOR
+      // ────────────────────────────────────────────────────────────────
+      class Floor {
+        constructor(config, index) {
+          this.id = config.id;
+          this.index = index;
+          this.type = config.type;
+          this.capacity = config.capacity;
+          this.residents = config.residents ?? 0;
+          this.reservedCount = 0;
+          this.presence = new Map();
+          this.waitingQueue = [];
+        }
+
+        reserve() {
+          this.reservedCount++;
+        }
+        unreserve() {
+          this.reservedCount--;
+        }
+
+        tryToMoveIn(person) {
+          this.reservedCount--;
+          if (this.residents < this.capacity) {
+            this.residents++;
+            this.addPhysicalPresence(person);
+            return true;
+          }
+          return false;
+        }
+
+        moveOut() {
+          this.residents = Math.max(0, this.residents - 1);
+        }
+        addPhysicalPresence(person) {
+          this.presence.set(person.id, person);
+        }
+        removePhysicalPresence(personId) {
+          this.presence.delete(personId);
+        }
+
+        get hasSpace() {
+          return this.residents + this.reservedCount < this.capacity;
+        }
+      }
+
+      // ────────────────────────────────────────────────────────────────
+      //  ELEVATOR
+      // ────────────────────────────────────────────────────────────────
+      class Elevator {
+        constructor(config, floorHeight) {
+          this.id = config.id;
+          this.capacity = config.capacity;
+          this.maxSpeed = config.maxSpeed; // floors per second
+          this.doorsTime = config.doorsTime; // seconds
+          this.loadUnloadTime = config.loadUnloadTime; // seconds
+
+          this.state = "IDLE"; // IDLE | MOVING | OPENING | CLOSING | READY_TO_LOAD_UNLOAD | LOAD_UNLOAD
+          this.currentFloorPos = config.startFloor; // continuous float — used for smooth rendering
+          this.currentFloor = config.startFloor; // integer — used for load/unload logic
+          this.targetFloorIndex = config.startFloor;
+          this.occupants = [];
+          this.floorsQueue = [];
+          this.doorTimer = 0;
+
+          // Spring bounce (visual-only, pixel offset applied in renderer)
+          this.springOffset = 0;
+          this.springVel = 0;
+        }
+
+        update(dt) {
+          // Spring physics — always runs, decays to zero when at rest
+          if (this.state !== "MOVING") {
+            const k = 150,
+              damping = 22;
+            const force = -k * this.springOffset - damping * this.springVel;
+            this.springVel += force * dt;
+            this.springOffset += this.springVel * dt;
+            if (
+              Math.abs(this.springOffset) < 0.05 &&
+              Math.abs(this.springVel) < 0.05
+            ) {
+              this.springOffset = 0;
+              this.springVel = 0;
+            }
+          }
+
+          if (this.state === "IDLE") {
+            if (this.floorsQueue.length > 0) {
+              this.targetFloorIndex = this.floorsQueue.shift();
+              this.state = "MOVING";
+            }
+            return;
+          }
+
+          if (this.state === "MOVING") {
+            const diff = this.targetFloorIndex - this.currentFloorPos;
+            const step = this.maxSpeed * dt;
+
+            if (Math.abs(diff) > step) {
+              this.currentFloorPos += Math.sign(diff) * step;
+            } else {
+              // Arrived — snap, update logic floor, kick spring
+              const arrivalDir = Math.sign(diff);
+              this.currentFloorPos = this.targetFloorIndex;
+              this.currentFloor = this.targetFloorIndex;
+              this.state = "OPENING";
+              this.doorTimer = 0;
+              // Spring kick in travel direction → slight overshoot feel
+              this.springVel = arrivalDir * 14;
+            }
+            return;
+          }
+
+          if (this.state === "OPENING") {
+            this.doorTimer += dt;
+            if (this.doorTimer >= this.doorsTime) {
+              this.state = "READY_TO_LOAD_UNLOAD";
+              this.doorTimer = 0;
+            }
+            return;
+          }
+
+          if (this.state === "CLOSING") {
+            this.doorTimer += dt;
+            if (this.doorTimer >= this.doorsTime) {
+              this.state = "IDLE";
+              this.doorTimer = 0;
+            }
+          }
+        }
+
+        processCall(floorIdx) {
+          // Ignore if already in queue OR already there with doors open
+          if (
+            this.floorsQueue.includes(floorIdx) ||
+            (this.state !== "IDLE" &&
+              this.state !== "MOVING" &&
+              this.currentFloor === floorIdx)
+          )
+            return;
+          this.floorsQueue.push(floorIdx);
+        }
+
+        startLoadUnload() {
+          this.state = "LOAD_UNLOAD";
+          this.doorTimer = 0;
+        }
+        completeLoadUnload() {
+          this.doorTimer = 0;
+          this.state = "CLOSING";
+        }
+      }
+
+      // ────────────────────────────────────────────────────────────────
+      //  BUILDING
+      // ────────────────────────────────────────────────────────────────
+      class Building {
+        constructor(floorsConfig, elevatorsConfig, bConfig) {
+          this.floorLineHeight = bConfig.floorLineHeight;
+          this.floorHeight = bConfig.floorHeight;
+          this.floors = floorsConfig.map((f, index) => new Floor(f, index));
+          this.elevators = elevatorsConfig.map(
+            (e) => new Elevator(e, this.floorHeight),
+          );
+          this.capacity = this.floors.reduce((sum, f) => sum + f.capacity, 0);
+          this._nextId = this.floors.length;
+        }
+
+        get currentPopulation() {
+          return this.floors.reduce(
+            (sum, f) => sum + f.residents + f.reservedCount,
+            0,
+          );
+        }
+
+        getFloorAtY(y) {
+          return Math.floor(y / (this.floorHeight + this.floorLineHeight));
+        }
+
+        getAvailableFloors() {
+          return this.floors.filter((f) => f.hasSpace);
+        }
+
+        // Shop: adds a new residential floor at the top of the building
+        addFloor() {
+          const index = this.floors.length;
+          const config = {
+            id: this._nextId++,
+            type: "RESIDENTIAL",
+            capacity: 2,
+          };
+          const floor = new Floor(config, index);
+          this.floors.push(floor);
+          this.capacity += floor.capacity;
+        }
+      }
+
+      // ────────────────────────────────────────────────────────────────
+      //  BOOT
+      // ────────────────────────────────────────────────────────────────
+      const game = new GameEngine(WORLD_CONFIG);
+      game.update(performance.now());
+    </script>
+  </body>
+</html>

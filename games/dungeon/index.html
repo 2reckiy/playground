@@ -1,0 +1,1723 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DUNGEON ENDLESS</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap");
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --stone: #1a1612;
+        --deep: #0d0b09;
+        --amber: #e8a020;
+        --fire: #ff6b1a;
+        --ice: #4fc3d8;
+        --blood: #c0392b;
+        --moss: #3d7a4a;
+        --gold: #f5d76e;
+        --dim: #3a3028;
+        --ui-bg: rgba(10, 8, 6, 0.85);
+        --font-px: "Press Start 2P", monospace;
+        --font-hud: "Share Tech Mono", monospace;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--deep);
+        font-family: var(--font-px);
+        cursor: none;
+      }
+
+      #canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        image-rendering: pixelated;
+      }
+
+      /* HUD overlay */
+      #hud {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        pointer-events: none;
+        z-index: 10;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 14px 18px;
+        font-family: var(--font-hud);
+        font-size: 13px;
+        color: var(--amber);
+        text-shadow: 0 0 8px var(--amber);
+      }
+      .hud-left,
+      .hud-right {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .hud-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+      .hud-label {
+        color: var(--dim);
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+
+      .bar-wrap {
+        width: 160px;
+        height: 10px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        position: relative;
+        overflow: hidden;
+      }
+      .bar-fill {
+        height: 100%;
+        transition: width 0.15s;
+        position: relative;
+      }
+      .bar-fill::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.25) 50%,
+          transparent 100%
+        );
+      }
+      #hp-fill {
+        background: var(--blood);
+        box-shadow: 0 0 6px var(--blood);
+      }
+      #mp-fill {
+        background: var(--ice);
+        box-shadow: 0 0 6px var(--ice);
+      }
+      #xp-fill {
+        background: var(--moss);
+        box-shadow: 0 0 6px var(--moss);
+      }
+
+      #depth-display {
+        font-family: var(--font-px);
+        font-size: 11px;
+        color: var(--gold);
+        text-shadow: 0 0 12px var(--gold);
+        letter-spacing: 2px;
+      }
+      #minimap {
+        border: 1px solid rgba(232, 160, 32, 0.3);
+        box-shadow: 0 0 10px rgba(232, 160, 32, 0.15);
+        image-rendering: pixelated;
+      }
+
+      /* Panel overlays */
+      .screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(20, 14, 8, 0.97) 0%,
+          rgba(5, 3, 2, 0.99) 100%
+        );
+        transition: opacity 0.4s;
+      }
+      .screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+        display: none;
+      }
+
+      .screen h1 {
+        font-family: var(--font-px);
+        font-size: clamp(18px, 4vw, 36px);
+        color: var(--amber);
+        text-shadow:
+          0 0 20px var(--amber),
+          0 0 40px var(--fire);
+        letter-spacing: 4px;
+        margin-bottom: 8px;
+      }
+      .screen .subtitle {
+        font-family: var(--font-hud);
+        font-size: 13px;
+        color: var(--dim);
+        letter-spacing: 3px;
+        margin-bottom: 40px;
+      }
+      .btn {
+        pointer-events: all;
+        font-family: var(--font-px);
+        font-size: 11px;
+        padding: 12px 28px;
+        background: transparent;
+        border: 1px solid var(--amber);
+        color: var(--amber);
+        cursor: pointer;
+        letter-spacing: 2px;
+        text-shadow: 0 0 8px var(--amber);
+        box-shadow:
+          0 0 12px rgba(232, 160, 32, 0.2),
+          inset 0 0 12px rgba(232, 160, 32, 0.05);
+        transition: all 0.2s;
+        margin: 6px;
+      }
+      .btn:hover {
+        background: rgba(232, 160, 32, 0.1);
+        box-shadow:
+          0 0 24px rgba(232, 160, 32, 0.5),
+          inset 0 0 12px rgba(232, 160, 32, 0.1);
+        transform: scale(1.03);
+      }
+      .config-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 32px;
+        margin-bottom: 32px;
+        font-family: var(--font-hud);
+        font-size: 12px;
+        color: #888;
+      }
+      .config-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .config-item label {
+        color: var(--amber);
+        font-size: 10px;
+        letter-spacing: 2px;
+      }
+      .config-item input[type="range"] {
+        -webkit-appearance: none;
+        width: 160px;
+        height: 4px;
+        background: var(--dim);
+        outline: none;
+        cursor: pointer;
+      }
+      .config-item input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 12px;
+        height: 12px;
+        background: var(--amber);
+        box-shadow: 0 0 6px var(--amber);
+      }
+      .keys-hint {
+        font-family: var(--font-hud);
+        font-size: 11px;
+        color: #555;
+        letter-spacing: 2px;
+        margin-top: 20px;
+        text-align: center;
+        line-height: 2;
+      }
+      .keys-hint span {
+        color: var(--amber);
+      }
+
+      #message-log {
+        position: fixed;
+        bottom: 14px;
+        left: 18px;
+        width: 340px;
+        pointer-events: none;
+        z-index: 10;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 2px;
+      }
+      .log-entry {
+        font-family: var(--font-hud);
+        font-size: 11px;
+        color: #aaa;
+        animation: fadeLog 6s forwards;
+        text-shadow: 0 1px 3px #000;
+      }
+      .log-entry.combat {
+        color: var(--fire);
+      }
+      .log-entry.item {
+        color: var(--gold);
+      }
+      .log-entry.level {
+        color: var(--ice);
+      }
+      @keyframes fadeLog {
+        0% {
+          opacity: 1;
+        }
+        70% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      #tooltip {
+        position: fixed;
+        pointer-events: none;
+        z-index: 20;
+        background: var(--ui-bg);
+        border: 1px solid rgba(232, 160, 32, 0.4);
+        padding: 8px 12px;
+        font-family: var(--font-hud);
+        font-size: 11px;
+        color: var(--amber);
+        max-width: 200px;
+        display: none;
+        box-shadow: 0 0 16px rgba(0, 0, 0, 0.8);
+      }
+
+      /* Scanline effect */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.08) 2px,
+          rgba(0, 0, 0, 0.08) 4px
+        );
+        pointer-events: none;
+        z-index: 100;
+      }
+
+      /* Custom cursor */
+      #cursor {
+        position: fixed;
+        width: 8px;
+        height: 8px;
+        background: var(--amber);
+        box-shadow: 0 0 6px var(--amber);
+        pointer-events: none;
+        z-index: 200;
+        transform: translate(-50%, -50%);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-left">
+        <span class="hud-label">Health</span>
+        <div class="bar-wrap">
+          <div class="bar-fill" id="hp-fill" style="width: 100%"></div>
+        </div>
+        <span class="hud-label">Mana</span>
+        <div class="bar-wrap">
+          <div class="bar-fill" id="mp-fill" style="width: 80%"></div>
+        </div>
+        <span class="hud-label">Experience</span>
+        <div class="bar-wrap">
+          <div class="bar-fill" id="xp-fill" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="hud-center">
+        <div id="depth-display">DEPTH: 1</div>
+        <canvas id="minimap" width="80" height="80"></canvas>
+      </div>
+      <div class="hud-right">
+        <span class="hud-label">Level <span id="level-val">1</span></span>
+        <span style="color: #888; font-size: 11px"
+          >Gold: <span id="gold-val" style="color: var(--gold)">0</span></span
+        >
+        <span style="color: #888; font-size: 11px"
+          >Kills: <span id="kills-val" style="color: var(--fire)">0</span></span
+        >
+        <span style="color: #888; font-size: 11px"
+          >Steps: <span id="steps-val">0</span></span
+        >
+      </div>
+    </div>
+
+    <!-- Message log -->
+    <div id="message-log"></div>
+    <div id="tooltip"></div>
+    <div id="cursor"></div>
+
+    <!-- Start Screen -->
+    <div class="screen" id="start-screen">
+      <h1>⚔ DUNGEON ENDLESS ⚔</h1>
+      <div class="subtitle">PROCEDURAL ABYSS — NO ESCAPE</div>
+
+      <div class="config-grid">
+        <div class="config-item">
+          <label>Room Density <span id="density-val">0.45</span></label>
+          <input
+            type="range"
+            id="cfg-density"
+            min="0.25"
+            max="0.70"
+            step="0.05"
+            value="0.45"
+          />
+        </div>
+        <div class="config-item">
+          <label>Enemy Count <span id="enemy-val">0</span></label>
+          <input
+            type="range"
+            id="cfg-enemies"
+            min="0"
+            max="30"
+            step="2"
+            value="12"
+          />
+        </div>
+        <div class="config-item">
+          <label>Chunk Size <span id="chunk-val">24</span></label>
+          <input
+            type="range"
+            id="cfg-chunk"
+            min="16"
+            max="40"
+            step="4"
+            value="24"
+          />
+        </div>
+        <div class="config-item">
+          <label>Item Density <span id="item-val">0.04</span></label>
+          <input
+            type="range"
+            id="cfg-items"
+            min="0.01"
+            max="0.12"
+            step="0.01"
+            value="0.04"
+          />
+        </div>
+      </div>
+
+      <button class="btn" id="start-btn">▶ DESCEND</button>
+
+      <div class="keys-hint">
+        <span>WASD / Arrows</span> — Move &nbsp;|&nbsp; <span>Space</span> —
+        Attack<br />
+        <span>F</span> — Interact &nbsp;|&nbsp; <span>TAB</span> — Config
+        &nbsp;|&nbsp; <span>ESC</span> — Pause
+      </div>
+    </div>
+
+    <!-- Pause Screen -->
+    <div class="screen hidden" id="pause-screen">
+      <h1>— PAUSED —</h1>
+      <button class="btn" id="resume-btn">RESUME</button>
+      <button class="btn" id="quit-btn">QUIT TO MENU</button>
+    </div>
+
+    <!-- Death Screen -->
+    <div class="screen hidden" id="death-screen">
+      <h1 style="color: var(--blood); text-shadow: 0 0 20px var(--blood)">
+        YOU DIED
+      </h1>
+      <div class="subtitle" id="death-stats"></div>
+      <button class="btn" id="retry-btn">TRY AGAIN</button>
+      <button class="btn" id="menu-btn">MAIN MENU</button>
+    </div>
+
+    <script>
+      "use strict";
+      // ============================================================
+      // CONFIG — all data-driven parameters
+      // ============================================================
+      const CONFIG = {
+        TILE: 20, // px per tile
+        CHUNK_SIZE: 24, // tiles per chunk
+        ROOM_DENSITY: 0.45, // probability of room vs corridor
+        ENEMY_COUNT: 0, // enemies per chunk
+        ITEM_DENSITY: 0.04, // item spawn probability per floor tile
+        FOV_RADIUS: 9, // visibility radius in tiles
+        PLAYER_SPEED: 1, // tiles per keypress
+        BASE_HP: 100,
+        BASE_MP: 60,
+        XP_PER_LEVEL: 100,
+        TORCH_FLICKER: true,
+        DEPTH_SCALE: 1.15, // enemy scaling per depth level
+      };
+
+      // ============================================================
+      // TILE TYPES — data-driven
+      // ============================================================
+      const T = {
+        VOID: 0,
+        FLOOR: 1,
+        WALL: 2,
+        DOOR: 3,
+        STAIR: 4,
+        WATER: 5,
+        LAVA: 6,
+      };
+      const TILE_DATA = {
+        [T.VOID]: { color: "#000", passable: false, label: "Void" },
+        [T.FLOOR]: { color: "#1e1914", passable: true, label: "Stone Floor" },
+        [T.WALL]: {
+          color: "#2e2620",
+          passable: false,
+          label: "Stone Wall",
+          topColor: "#3d3228",
+        },
+        [T.DOOR]: {
+          color: "#5c3d1a",
+          passable: true,
+          label: "Door",
+          glyph: "+",
+        },
+        [T.STAIR]: {
+          color: "#4a3520",
+          passable: true,
+          label: "Stairs Down",
+          glyph: ">",
+        },
+        [T.WATER]: {
+          color: "#0d2d3a",
+          passable: true,
+          label: "Water",
+          damage: 0,
+        },
+        [T.LAVA]: {
+          color: "#3d1200",
+          passable: true,
+          label: "Lava",
+          damage: 5,
+        },
+      };
+
+      // ============================================================
+      // ITEM TABLE — data-driven
+      // ============================================================
+      const ITEMS = [
+        {
+          id: "health_potion",
+          name: "Health Potion",
+          color: "#c0392b",
+          glyph: "!",
+          effect: { hp: 40 },
+          rarity: 10,
+        },
+        {
+          id: "mana_potion",
+          name: "Mana Potion",
+          color: "#2980b9",
+          glyph: "!",
+          effect: { mp: 30 },
+          rarity: 8,
+        },
+        {
+          id: "gold_pile",
+          name: "Gold",
+          color: "#f5d76e",
+          glyph: "$",
+          effect: { gold: 15 },
+          rarity: 15,
+        },
+        {
+          id: "sword",
+          name: "Iron Sword",
+          color: "#95a5a6",
+          glyph: "/",
+          effect: { atk: 5 },
+          rarity: 3,
+        },
+        {
+          id: "shield",
+          name: "Wooden Shield",
+          color: "#8B5E3C",
+          glyph: "]",
+          effect: { def: 3 },
+          rarity: 3,
+        },
+        {
+          id: "ring_power",
+          name: "Ring of Power",
+          color: "#e74c3c",
+          glyph: "°",
+          effect: { atk: 8 },
+          rarity: 1,
+        },
+        {
+          id: "boots_speed",
+          name: "Boots of Haste",
+          color: "#27ae60",
+          glyph: '"',
+          effect: { spd: 1 },
+          rarity: 2,
+        },
+        {
+          id: "scroll_fire",
+          name: "Scroll of Fire",
+          color: "#e67e22",
+          glyph: "?",
+          effect: { spell: "fire" },
+          rarity: 4,
+        },
+      ];
+      function randomItem() {
+        const totalRarity = ITEMS.reduce((s, i) => s + i.rarity, 0);
+        let r = Math.random() * totalRarity;
+        for (const item of ITEMS) {
+          r -= item.rarity;
+          if (r <= 0) return { ...item };
+        }
+        return { ...ITEMS[0] };
+      }
+
+      // ============================================================
+      // ENEMY TABLE — data-driven
+      // ============================================================
+      const ENEMIES = [
+        {
+          id: "rat",
+          name: "Giant Rat",
+          color: "#8B7355",
+          glyph: "r",
+          hp: 12,
+          atk: 3,
+          def: 0,
+          xp: 8,
+          speed: 1,
+          sight: 5,
+        },
+        {
+          id: "goblin",
+          name: "Goblin",
+          color: "#5a8a40",
+          glyph: "g",
+          hp: 20,
+          atk: 6,
+          def: 1,
+          xp: 15,
+          speed: 1,
+          sight: 6,
+        },
+        {
+          id: "orc",
+          name: "Orc Warrior",
+          color: "#4a7a30",
+          glyph: "O",
+          hp: 45,
+          atk: 12,
+          def: 4,
+          xp: 30,
+          speed: 1,
+          sight: 5,
+        },
+        {
+          id: "skeleton",
+          name: "Skeleton",
+          color: "#d4c9a8",
+          glyph: "s",
+          hp: 25,
+          atk: 8,
+          def: 2,
+          xp: 20,
+          speed: 1,
+          sight: 7,
+        },
+        {
+          id: "troll",
+          name: "Cave Troll",
+          color: "#6b8f4a",
+          glyph: "T",
+          hp: 80,
+          atk: 18,
+          def: 6,
+          xp: 60,
+          speed: 1,
+          sight: 4,
+        },
+        {
+          id: "wraith",
+          name: "Wraith",
+          color: "#8888cc",
+          glyph: "W",
+          hp: 35,
+          atk: 14,
+          def: 3,
+          xp: 45,
+          speed: 2,
+          sight: 8,
+        },
+        {
+          id: "dragon",
+          name: "Dragon",
+          color: "#cc4422",
+          glyph: "D",
+          hp: 150,
+          atk: 30,
+          def: 10,
+          xp: 150,
+          speed: 1,
+          sight: 8,
+        },
+      ];
+      function randomEnemy(depth) {
+        const maxTier = Math.min(Math.floor(depth / 3), ENEMIES.length - 1);
+        const tier = Math.floor(Math.random() * (maxTier + 1));
+        const base = ENEMIES[tier];
+        const scale = Math.pow(CONFIG.DEPTH_SCALE, depth - 1);
+        return {
+          ...base,
+          hp: Math.round(base.hp * scale),
+          maxHp: Math.round(base.hp * scale),
+          atk: Math.round(base.atk * scale),
+          def: Math.round(base.def * scale),
+          xp: Math.round(base.xp * scale),
+        };
+      }
+
+      // ============================================================
+      // UTILITY
+      // ============================================================
+      const rng = (min, max) =>
+        Math.floor(Math.random() * (max - min + 1)) + min;
+      const lerp = (a, b, t) => a + (b - a) * t;
+      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+      // ============================================================
+      // CHUNK & WORLD GENERATION
+      // ============================================================
+      class Chunk {
+        constructor(cx, cy, depth, seed) {
+          this.cx = cx;
+          this.cy = cy;
+          this.size = CONFIG.CHUNK_SIZE;
+          this.tiles = new Uint8Array(this.size * this.size);
+          this.entities = [];
+          this.explored = new Uint8Array(this.size * this.size);
+          this._generate(depth, seed);
+        }
+        idx(x, y) {
+          return y * this.size + x;
+        }
+        get(x, y) {
+          if (x < 0 || y < 0 || x >= this.size || y >= this.size) return T.WALL;
+          return this.tiles[this.idx(x, y)];
+        }
+        set(x, y, t) {
+          if (x < 0 || y < 0 || x >= this.size || y >= this.size) return;
+          this.tiles[this.idx(x, y)] = t;
+        }
+        _generate(depth, seed) {
+          // Fill with walls
+          this.tiles.fill(T.WALL);
+          // BSP-lite: place rooms
+          const rooms = [];
+          const attempts = 30;
+          for (let i = 0; i < attempts; i++) {
+            const rw = rng(4, 9),
+              rh = rng(3, 7);
+            const rx = rng(1, this.size - rw - 2);
+            const ry = rng(1, this.size - rh - 2);
+            // Check overlap
+            let ok = true;
+            for (const r of rooms) {
+              if (
+                rx < r.x + r.w + 1 &&
+                rx + rw + 1 > r.x &&
+                ry < r.y + r.h + 1 &&
+                ry + rh + 1 > r.y
+              ) {
+                ok = false;
+                break;
+              }
+            }
+            if (ok) rooms.push({ x: rx, y: ry, w: rw, h: rh });
+          }
+          // Carve rooms
+          for (const r of rooms) {
+            for (let y = r.y; y < r.y + r.h; y++)
+              for (let x = r.x; x < r.x + r.w; x++) this.set(x, y, T.FLOOR);
+          }
+          // Carve corridors between rooms
+          for (let i = 1; i < rooms.length; i++) {
+            const a = rooms[i - 1],
+              b = rooms[i];
+            const ax = Math.floor(a.x + a.w / 2),
+              ay = Math.floor(a.y + a.h / 2);
+            const bx = Math.floor(b.x + b.w / 2),
+              by = Math.floor(b.y + b.h / 2);
+            this._carveCorridor(ax, ay, bx, by);
+          }
+          // Doors at room entrances
+          for (const r of rooms) {
+            if (Math.random() < 0.4) {
+              const dx = Math.floor(r.x + r.w / 2);
+              const dy = r.y;
+              this.set(dx, dy, T.DOOR);
+            }
+          }
+          // Stairs (one per chunk, in last room)
+          if (rooms.length > 0) {
+            const last = rooms[rooms.length - 1];
+            this.set(
+              Math.floor(last.x + last.w / 2),
+              Math.floor(last.y + last.h / 2),
+              T.STAIR,
+            );
+            this.stairPos = {
+              x: Math.floor(last.x + last.w / 2),
+              y: Math.floor(last.y + last.h / 2),
+            };
+          }
+          // Water/lava patches
+          if (depth > 2) {
+            const patchType = Math.random() < 0.5 ? T.WATER : T.LAVA;
+            const pr = rooms[Math.floor(Math.random() * rooms.length)];
+            if (pr) {
+              const px = rng(pr.x, pr.x + pr.w - 1),
+                py = rng(pr.y, pr.y + pr.h - 1);
+              for (let dy = -1; dy <= 1; dy++)
+                for (let dx = -1; dx <= 1; dx++)
+                  if (this.get(px + dx, py + dy) === T.FLOOR)
+                    this.set(px + dx, py + dy, patchType);
+            }
+          }
+          // Spawn entities (items + enemies)
+          this._spawnEntities(rooms, depth);
+          this._rooms = rooms;
+          this._spawnRoom = rooms[0];
+        }
+        _carveCorridor(x1, y1, x2, y2) {
+          let x = x1,
+            y = y1;
+          while (x !== x2) {
+            this.set(x, y, T.FLOOR);
+            x += x < x2 ? 1 : -1;
+          }
+          while (y !== y2) {
+            this.set(x, y, T.FLOOR);
+            y += y < y2 ? 1 : -1;
+          }
+        }
+        _spawnEntities(rooms, depth) {
+          // Items
+          for (let y = 0; y < this.size; y++)
+            for (let x = 0; x < this.size; x++)
+              if (
+                this.get(x, y) === T.FLOOR &&
+                Math.random() < CONFIG.ITEM_DENSITY
+              )
+                this.entities.push(new ItemEntity(x, y, randomItem()));
+          // Enemies
+          const enemyRooms = rooms.slice(1); // skip spawn room
+          const count = Math.min(CONFIG.ENEMY_COUNT, enemyRooms.length * 3);
+          for (let i = 0; i < count; i++) {
+            const r = enemyRooms[i % enemyRooms.length];
+            if (!r) continue;
+            const ex = rng(r.x, r.x + r.w - 1);
+            const ey = rng(r.y, r.y + r.h - 1);
+            this.entities.push(new EnemyEntity(ex, ey, randomEnemy(depth)));
+          }
+        }
+      }
+
+      // ============================================================
+      // ENTITY BASE CLASS
+      // ============================================================
+      class Entity {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.id = Entity._nextId++;
+          this.alive = true;
+        }
+        update(dt, world) {}
+        draw(ctx, ox, oy, tile, vis) {}
+      }
+      Entity._nextId = 1;
+
+      class ItemEntity extends Entity {
+        constructor(x, y, data) {
+          super(x, y);
+          this.data = data;
+          this.type = "item";
+          this._bob = Math.random() * Math.PI * 2;
+        }
+        update(dt) {
+          this._bob += dt * 2;
+        }
+        draw(ctx, ox, oy, tile, vis) {
+          if (!vis) return;
+          const px = this.x * tile + ox + tile / 2;
+          const py = this.y * tile + oy + tile / 2 + Math.sin(this._bob) * 1.5;
+          ctx.font = `${Math.floor(tile * 0.65)}px monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.shadowColor = this.data.color;
+          ctx.shadowBlur = 10;
+          ctx.fillStyle = this.data.color;
+          ctx.fillText(this.data.glyph, px, py);
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      class EnemyEntity extends Entity {
+        constructor(x, y, data) {
+          super(x, y);
+          Object.assign(this, data);
+          this.maxHp = this.hp;
+          this.type = "enemy";
+          this._tick = 0;
+          this._alertTick = 0;
+          this._path = [];
+          this._state = "idle"; // idle | chase | attack
+          this._animX = 0;
+          this._animY = 0;
+          this._hitFlash = 0;
+        }
+        update(dt, world, player) {
+          this._tick += dt;
+          if (this._hitFlash > 0) this._hitFlash -= dt;
+          if (this._tick < 0.5 / this.speed) return;
+          this._tick = 0;
+          if (!this.alive) return;
+
+          const dx = player.x - this.x,
+            dy = player.y - this.y;
+          const dist = Math.abs(dx) + Math.abs(dy);
+
+          if (dist <= this.sight) this._state = "chase";
+          if (this._state === "idle") return;
+
+          if (dist === 1) {
+            this._state = "attack";
+            world.attackPlayer(this);
+            return;
+          }
+          // Simple step toward player
+          const mx = Math.sign(dx),
+            my = Math.sign(dy);
+          const nx = this.x + mx,
+            ny = this.y + my;
+          const chunk = world.getChunkForWorld(nx, ny);
+          if (chunk) {
+            const lx = nx - chunk.cx * CONFIG.CHUNK_SIZE;
+            const ly = ny - chunk.cy * CONFIG.CHUNK_SIZE;
+            if (
+              TILE_DATA[chunk.get(lx, ly)].passable &&
+              !world.entityAt(nx, ny)
+            ) {
+              this._animX = (this.x - nx) * CONFIG.TILE;
+              this._animY = (this.y - ny) * CONFIG.TILE;
+              this.x = nx;
+              this.y = ny;
+            }
+          }
+        }
+        draw(ctx, ox, oy, tile, vis) {
+          if (!vis || !this.alive) return;
+          const px = this.x * tile + ox;
+          const py = this.y * tile + oy;
+          const ax = this._animX * 0.7,
+            ay = this._animY * 0.7;
+          this._animX *= 0.6;
+          this._animY *= 0.6;
+
+          // shadow
+          ctx.fillStyle = "rgba(0,0,0,0.4)";
+          ctx.fillRect(
+            px + ax + 2,
+            py + ay + tile * 0.85,
+            tile * 0.8,
+            tile * 0.12,
+          );
+
+          // glyph
+          ctx.font = `bold ${Math.floor(tile * 0.72)}px monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          const flash = this._hitFlash > 0;
+          ctx.fillStyle = flash ? "#fff" : this.color;
+          ctx.shadowColor = this.color;
+          ctx.shadowBlur = flash ? 16 : 8;
+          ctx.fillText(this.glyph, px + ax + tile / 2, py + ay + tile / 2);
+          ctx.shadowBlur = 0;
+
+          // HP bar
+          if (this.hp < this.maxHp) {
+            const bw = tile - 4,
+              bh = 3;
+            const bx = px + ax + 2,
+              by = py + ay - 5;
+            ctx.fillStyle = "#333";
+            ctx.fillRect(bx, by, bw, bh);
+            ctx.fillStyle = this.hp > this.maxHp * 0.5 ? "#4a9" : "#c33";
+            ctx.fillRect(bx, by, bw * (this.hp / this.maxHp), bh);
+          }
+        }
+      }
+
+      // ============================================================
+      // PLAYER
+      // ============================================================
+      class Player extends Entity {
+        constructor(x, y) {
+          super(x, y);
+          this.type = "player";
+          this.hp = CONFIG.BASE_HP;
+          this.maxHp = CONFIG.BASE_HP;
+          this.mp = CONFIG.BASE_MP;
+          this.maxMp = CONFIG.BASE_MP;
+          this.xp = 0;
+          this.xpNext = CONFIG.XP_PER_LEVEL;
+          this.level = 1;
+          this.atk = 10;
+          this.def = 2;
+          this.spd = 1;
+          this.gold = 0;
+          this.kills = 0;
+          this.steps = 0;
+          this._animX = 0;
+          this._animY = 0;
+          this._hitFlash = 0;
+          this._bobT = 0;
+        }
+        move(dx, dy, world) {
+          const nx = this.x + dx,
+            ny = this.y + dy;
+          const chunk = world.getChunkForWorld(nx, ny);
+          if (!chunk) {
+            world.ensureChunk(
+              Math.floor(nx / CONFIG.CHUNK_SIZE),
+              Math.floor(ny / CONFIG.CHUNK_SIZE),
+            );
+            return;
+          }
+          const lx = nx - chunk.cx * CONFIG.CHUNK_SIZE;
+          const ly = ny - chunk.cy * CONFIG.CHUNK_SIZE;
+          const tile = chunk.get(lx, ly);
+          if (!TILE_DATA[tile].passable) return;
+          const enemy = world.enemyAt(nx, ny);
+          if (enemy) {
+            world.playerAttack(enemy);
+            return;
+          }
+          this._animX = (this.x - nx) * CONFIG.TILE;
+          this._animY = (this.y - ny) * CONFIG.TILE;
+          this.x = nx;
+          this.y = ny;
+          this.steps++;
+          // Tile effects
+          if (tile === T.LAVA)
+            world.log(
+              `Lava burns you! -${TILE_DATA[T.LAVA].damage}hp`,
+              "combat",
+            );
+          world.pickupItems(nx, ny);
+        }
+        gainXP(amount) {
+          this.xp += amount;
+          while (this.xp >= this.xpNext) {
+            this.xp -= this.xpNext;
+            this.level++;
+            this.xpNext = Math.floor(
+              CONFIG.XP_PER_LEVEL * Math.pow(1.3, this.level - 1),
+            );
+            this.maxHp += 15;
+            this.hp = Math.min(this.hp + 15, this.maxHp);
+            this.maxMp += 8;
+            this.mp = Math.min(this.mp + 8, this.maxMp);
+            this.atk += 3;
+            this.def += 1;
+            return true;
+          }
+          return false;
+        }
+        update(dt) {
+          this._bobT += dt;
+          if (this._hitFlash > 0) this._hitFlash -= dt;
+          this._animX *= 0.55;
+          this._animY *= 0.55;
+          // MP regen
+          this.mp = Math.min(this.maxMp, this.mp + dt * 0.5);
+        }
+        draw(ctx, ox, oy, tile) {
+          const px = this.x * tile + ox;
+          const py = this.y * tile + oy;
+          const ax = this._animX,
+            ay = this._animY;
+          // Torchlight glow
+          const grad = ctx.createRadialGradient(
+            px + ax + tile / 2,
+            py + ay + tile / 2,
+            0,
+            px + ax + tile / 2,
+            py + ay + tile / 2,
+            tile * CONFIG.FOV_RADIUS * 0.9,
+          );
+          const flicker = CONFIG.TORCH_FLICKER
+            ? 0.85 + Math.sin(this._bobT * 7.3) * 0.08
+            : 1;
+          grad.addColorStop(0, `rgba(232,160,32,${0.22 * flicker})`);
+          grad.addColorStop(0.4, `rgba(200,100,20,${0.1 * flicker})`);
+          grad.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(
+            px + ax + tile / 2,
+            py + ay + tile / 2,
+            tile * CONFIG.FOV_RADIUS * 0.9,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+
+          // Shadow
+          ctx.fillStyle = "rgba(0,0,0,0.5)";
+          ctx.fillRect(
+            px + ax + 3,
+            py + ay + tile * 0.85,
+            tile * 0.75,
+            tile * 0.12,
+          );
+
+          // Body
+          const flash = this._hitFlash > 0;
+          ctx.font = `bold ${Math.floor(tile * 0.82)}px monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = flash ? "#fff" : "#f5e6c0";
+          ctx.shadowColor = "#e8a020";
+          ctx.shadowBlur = flash ? 20 : 12;
+          ctx.fillText("@", px + ax + tile / 2, py + ay + tile / 2);
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      // ============================================================
+      // WORLD — manages infinite chunked grid
+      // ============================================================
+      class World {
+        constructor(depth) {
+          this.depth = depth;
+          this._chunks = new Map();
+          this._messageCallback = null;
+          this._deathCallback = null;
+          this._levelCallback = null;
+          this.player = null;
+        }
+        _key(cx, cy) {
+          return `${cx},${cy}`;
+        }
+        ensureChunk(cx, cy) {
+          const k = this._key(cx, cy);
+          if (!this._chunks.has(k)) {
+            const c = new Chunk(cx, cy, this.depth, k);
+            this._chunks.set(k, c);
+          }
+          return this._chunks.get(k);
+        }
+        getChunkForWorld(wx, wy) {
+          const cx = Math.floor(wx / CONFIG.CHUNK_SIZE);
+          const cy = Math.floor(wy / CONFIG.CHUNK_SIZE);
+          return (
+            this._chunks.get(this._key(cx, cy)) || this.ensureChunk(cx, cy)
+          );
+        }
+        getTile(wx, wy) {
+          const chunk = this.getChunkForWorld(wx, wy);
+          const lx = wx - chunk.cx * CONFIG.CHUNK_SIZE;
+          const ly = wy - chunk.cy * CONFIG.CHUNK_SIZE;
+          return chunk.get(lx, ly);
+        }
+        setTile(wx, wy, t) {
+          const chunk = this.getChunkForWorld(wx, wy);
+          const lx = wx - chunk.cx * CONFIG.CHUNK_SIZE;
+          const ly = wy - chunk.cy * CONFIG.CHUNK_SIZE;
+          chunk.set(lx, ly, t);
+        }
+        isExplored(wx, wy) {
+          const chunk = this.getChunkForWorld(wx, wy);
+          const lx = wx - chunk.cx * CONFIG.CHUNK_SIZE;
+          const ly = wy - chunk.cy * CONFIG.CHUNK_SIZE;
+          return chunk.explored[chunk.idx(lx, ly)];
+        }
+        setExplored(wx, wy) {
+          const chunk = this.getChunkForWorld(wx, wy);
+          const lx = wx - chunk.cx * CONFIG.CHUNK_SIZE;
+          const ly = wy - chunk.cy * CONFIG.CHUNK_SIZE;
+          if (lx >= 0 && ly >= 0 && lx < chunk.size && ly < chunk.size)
+            chunk.explored[chunk.idx(lx, ly)] = 1;
+        }
+        allEntities() {
+          const ents = [];
+          for (const chunk of this._chunks.values())
+            for (const e of chunk.entities) ents.push(e);
+          return ents;
+        }
+        enemyAt(wx, wy) {
+          const chunk = this.getChunkForWorld(wx, wy);
+          return chunk.entities.find(
+            (e) => e.type === "enemy" && e.alive && e.x === wx && e.y === wy,
+          );
+        }
+        entityAt(wx, wy) {
+          const chunk = this.getChunkForWorld(wx, wy);
+          return chunk.entities.find(
+            (e) => e.alive && e.x === wx && e.y === wy,
+          );
+        }
+        pickupItems(wx, wy) {
+          const chunk = this.getChunkForWorld(wx, wy);
+          const items = chunk.entities.filter(
+            (e) => e.type === "item" && e.x === wx && e.y === wy,
+          );
+          for (const item of items) {
+            item.alive = false;
+            this._applyItem(item.data);
+          }
+          chunk.entities = chunk.entities.filter((e) => e.alive);
+        }
+        _applyItem(data) {
+          const p = this.player;
+          if (!p) return;
+          const fx = data.effect;
+          if (fx.hp) {
+            p.hp = Math.min(p.maxHp, p.hp + fx.hp);
+            this.log(`${data.name}: +${fx.hp} HP`, "item");
+          }
+          if (fx.mp) {
+            p.mp = Math.min(p.maxMp, p.mp + fx.mp);
+            this.log(`${data.name}: +${fx.mp} MP`, "item");
+          }
+          if (fx.gold) {
+            p.gold += fx.gold;
+            this.log(`Picked up ${fx.gold} gold coins`, "item");
+          }
+          if (fx.atk) {
+            p.atk += fx.atk;
+            this.log(`${data.name}: +${fx.atk} ATK`, "item");
+          }
+          if (fx.def) {
+            p.def += fx.def;
+            this.log(`${data.name}: +${fx.def} DEF`, "item");
+          }
+          if (fx.spd) {
+            p.spd += fx.spd;
+            this.log(`${data.name}: +${fx.spd} SPD`, "item");
+          }
+        }
+        playerAttack(enemy) {
+          const p = this.player;
+          const dmg = Math.max(1, p.atk - enemy.def + rng(-2, 3));
+          enemy.hp -= dmg;
+          enemy._hitFlash = 0.15;
+          this.log(`You hit ${enemy.name} for ${dmg} damage!`, "combat");
+          if (enemy.hp <= 0) {
+            enemy.alive = false;
+            this.log(`${enemy.name} dies!`, "combat");
+            const leveled = p.gainXP(enemy.xp);
+            p.kills++;
+            if (leveled && this._levelCallback) this._levelCallback(p.level);
+            for (const chunk of this._chunks.values())
+              chunk.entities = chunk.entities.filter(
+                (e) => e.alive || e !== enemy,
+              );
+          }
+        }
+        attackPlayer(enemy) {
+          const p = this.player;
+          const dmg = Math.max(1, enemy.atk - p.def + rng(-2, 3));
+          p.hp -= dmg;
+          p._hitFlash = 0.15;
+          this.log(`${enemy.name} hits you for ${dmg} damage!`, "combat");
+          if (p.hp <= 0 && this._deathCallback) this._deathCallback();
+        }
+        updateFOV(px, py) {
+          const r = CONFIG.FOV_RADIUS;
+          for (let dy = -r; dy <= r; dy++)
+            for (let dx = -r; dx <= r; dx++)
+              if (dx * dx + dy * dy <= r * r)
+                this.setExplored(px + dx, py + dy);
+        }
+        log(msg, cls) {
+          if (this._messageCallback) this._messageCallback(msg, cls);
+        }
+      }
+
+      // ============================================================
+      // RENDERER
+      // ============================================================
+      class Renderer {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext("2d");
+          this._resize();
+          window.addEventListener("resize", () => this._resize());
+        }
+        _resize() {
+          this.W = window.innerWidth;
+          this.H = window.innerHeight;
+          this.canvas.width = this.W;
+          this.canvas.height = this.H;
+        }
+        draw(world, player, time) {
+          const ctx = this.ctx;
+          const tile = CONFIG.TILE;
+          const W = this.W,
+            H = this.H;
+          // Camera: center on player
+          const ox = Math.floor(
+            W / 2 - (player.x + 0.5) * tile - player._animX,
+          );
+          const oy = Math.floor(
+            H / 2 - (player.y + 0.5) * tile - player._animY,
+          );
+          ctx.fillStyle = "#000";
+          ctx.fillRect(0, 0, W, H);
+
+          const vx0 = Math.floor(-ox / tile) - 1;
+          const vy0 = Math.floor(-oy / tile) - 1;
+          const vx1 = Math.ceil((W - ox) / tile) + 1;
+          const vy1 = Math.ceil((H - oy) / tile) + 1;
+
+          // Tiles
+          for (let wy = vy0; wy < vy1; wy++) {
+            for (let wx = vx0; wx < vx1; wx++) {
+              const explored = world.isExplored(wx, wy);
+              if (!explored) continue;
+              const t = world.getTile(wx, wy);
+              const td = TILE_DATA[t];
+              const px = wx * tile + ox;
+              const py = wy * tile + oy;
+              const inFOV =
+                (wx - player.x) ** 2 + (wy - player.y) ** 2 <=
+                CONFIG.FOV_RADIUS ** 2;
+              const bright = inFOV ? 1.0 : 0.28;
+
+              ctx.fillStyle = this._dimColor(td.color, bright);
+              ctx.fillRect(px, py, tile, tile);
+
+              if (t === T.WALL) {
+                ctx.fillStyle = this._dimColor(
+                  td.topColor || td.color,
+                  bright * 0.7,
+                );
+                ctx.fillRect(px, py, tile, Math.floor(tile * 0.25));
+              }
+              if (t === T.LAVA && inFOV) {
+                const lf = 0.5 + 0.5 * Math.sin(time * 3 + wx * 0.7 + wy * 1.1);
+                ctx.fillStyle = `rgba(255,80,0,${0.15 * lf})`;
+                ctx.fillRect(px, py, tile, tile);
+              }
+              if (t === T.WATER && inFOV) {
+                const wf = 0.5 + 0.5 * Math.sin(time * 2 + wx * 0.5 + wy * 0.9);
+                ctx.fillStyle = `rgba(30,120,180,${0.18 * wf})`;
+                ctx.fillRect(px, py, tile, tile);
+              }
+              if (td.glyph && inFOV) {
+                ctx.font = `${Math.floor(tile * 0.7)}px monospace`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = t === T.STAIR ? "#f5d76e" : "#8B5E3C";
+                ctx.fillText(td.glyph, px + tile / 2, py + tile / 2);
+              }
+            }
+          }
+
+          // Entities
+          for (const chunk of world._chunks.values()) {
+            for (const e of chunk.entities) {
+              if (!e.alive) continue;
+              const inFOV =
+                (e.x - player.x) ** 2 + (e.y - player.y) ** 2 <=
+                (CONFIG.FOV_RADIUS + 1) ** 2;
+              const explored = world.isExplored(e.x, e.y);
+              e.draw(ctx, ox, oy, tile, inFOV && explored);
+            }
+          }
+
+          // Player
+          player.draw(ctx, ox, oy, tile);
+
+          // Vignette
+          const vig = ctx.createRadialGradient(
+            W / 2,
+            H / 2,
+            H * 0.25,
+            W / 2,
+            H / 2,
+            H * 0.85,
+          );
+          vig.addColorStop(0, "rgba(0,0,0,0)");
+          vig.addColorStop(1, "rgba(0,0,0,0.65)");
+          ctx.fillStyle = vig;
+          ctx.fillRect(0, 0, W, H);
+        }
+        _dimColor(hex, bright) {
+          if (bright >= 1) return hex;
+          // Parse and dim
+          let r = parseInt(hex.slice(1, 3), 16);
+          let g = parseInt(hex.slice(3, 5), 16);
+          let b = parseInt(hex.slice(5, 7), 16);
+          r = Math.round(r * bright);
+          g = Math.round(g * bright);
+          b = Math.round(b * bright);
+          return `rgb(${r},${g},${b})`;
+        }
+        drawMinimap(minimapCanvas, world, player) {
+          const mc = minimapCanvas;
+          const mctx = mc.getContext("2d");
+          const mw = mc.width,
+            mh = mc.height;
+          const r = 20; // tiles around player to show
+          mctx.fillStyle = "#000";
+          mctx.fillRect(0, 0, mw, mh);
+          const tw = mw / (r * 2 + 1),
+            th = mh / (r * 2 + 1);
+          for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+              const wx = player.x + dx,
+                wy = player.y + dy;
+              if (!world.isExplored(wx, wy)) continue;
+              const t = world.getTile(wx, wy);
+              const td = TILE_DATA[t];
+              const mx = (dx + r) * tw,
+                my = (dy + r) * th;
+              mctx.fillStyle = TILE_DATA[t].passable ? "#2a2018" : "#4a3828";
+              if (t === T.FLOOR || t === T.DOOR) mctx.fillStyle = "#2a2018";
+              if (t === T.WALL) mctx.fillStyle = "#4a3828";
+              if (t === T.STAIR) mctx.fillStyle = "#f5d76e";
+              if (t === T.WATER) mctx.fillStyle = "#1a5070";
+              if (t === T.LAVA) mctx.fillStyle = "#8B2000";
+              mctx.fillRect(mx, my, tw + 0.5, th + 0.5);
+            }
+          }
+          // Enemies in FOV
+          for (const chunk of world._chunks.values()) {
+            for (const e of chunk.entities) {
+              if (!e.alive || e.type !== "enemy") continue;
+              if ((e.x - player.x) ** 2 + (e.y - player.y) ** 2 > r * r)
+                continue;
+              const mx = (e.x - player.x + r) * tw,
+                my = (e.y - player.y + r) * th;
+              mctx.fillStyle = e.color;
+              mctx.fillRect(mx + tw * 0.1, my + th * 0.1, tw * 0.8, th * 0.8);
+            }
+          }
+          // Player dot
+          mctx.fillStyle = "#f5e6c0";
+          mctx.shadowColor = "#e8a020";
+          mctx.shadowBlur = 3;
+          mctx.fillRect(r * tw, r * th, tw, th);
+          mctx.shadowBlur = 0;
+        }
+      }
+
+      // ============================================================
+      // GAME — main orchestrator
+      // ============================================================
+      class Game {
+        constructor() {
+          this.canvas = document.getElementById("canvas");
+          this.renderer = new Renderer(this.canvas);
+          this.world = null;
+          this.player = null;
+          this._running = false;
+          this._paused = false;
+          this._lastTime = 0;
+          this._depth = 1;
+          this._keys = {};
+          this._moveTimer = 0;
+          this._raf = null;
+
+          this._bindUI();
+          this._bindInput();
+        }
+
+        _bindUI() {
+          const $ = (id) => document.getElementById(id);
+          // Config sliders
+          const sliders = [
+            [
+              "cfg-density",
+              "density-val",
+              (v) => (CONFIG.ROOM_DENSITY = parseFloat(v)),
+            ],
+            [
+              "cfg-enemies",
+              "enemy-val",
+              (v) => (CONFIG.ENEMY_COUNT = parseInt(v)),
+            ],
+            [
+              "cfg-chunk",
+              "chunk-val",
+              (v) => (CONFIG.CHUNK_SIZE = parseInt(v)),
+            ],
+            [
+              "cfg-items",
+              "item-val",
+              (v) => (CONFIG.ITEM_DENSITY = parseFloat(v)),
+            ],
+          ];
+          for (const [id, labelId, setter] of sliders) {
+            $(id).addEventListener("input", (e) => {
+              $(labelId).textContent = e.target.value;
+              setter(e.target.value);
+            });
+          }
+          $("start-btn").addEventListener("click", () => {
+            console.log("START");
+            this.start();
+          });
+          $("resume-btn").addEventListener("click", () => this.resume());
+          $("quit-btn").addEventListener("click", () => this.showMenu());
+          $("retry-btn").addEventListener("click", () => this.start());
+          $("menu-btn").addEventListener("click", () => this.showMenu());
+        }
+
+        _bindInput() {
+          document.addEventListener("keydown", (e) => {
+            this._keys[e.code] = true;
+            if (!this._running) return;
+            if (e.code === "Escape") {
+              this._paused ? this.resume() : this.pause();
+              e.preventDefault();
+            }
+            if (e.code === "Tab") {
+              /* config overlay — future */ e.preventDefault();
+            }
+          });
+          document.addEventListener("keyup", (e) => {
+            this._keys[e.code] = false;
+          });
+
+          // Custom cursor
+          document.addEventListener("mousemove", (e) => {
+            const c = document.getElementById("cursor");
+            c.style.left = e.clientX + "px";
+            c.style.top = e.clientY + "px";
+          });
+        }
+
+        start() {
+          this._depth = 1;
+          this._screen("none");
+          this._initWorld();
+          this._running = true;
+          this._paused = false;
+          this._lastTime = performance.now();
+          if (this._raf) cancelAnimationFrame(this._raf);
+          this._loop(this._lastTime);
+        }
+
+        _initWorld() {
+          this.world = new World(this._depth);
+          // Spawn player in first chunk's first room
+          const startChunk = this.world.ensureChunk(0, 0);
+          const sr = startChunk._spawnRoom || { x: 2, y: 2 };
+          this.player = new Player(sr.x + 1, sr.y + 1);
+          this.world.player = this.player;
+          this.world._messageCallback = (msg, cls) => this._log(msg, cls);
+          this.world._deathCallback = () => this._onDeath();
+          this.world._levelCallback = (lv) => {
+            this._log(`LEVEL UP! You are now level ${lv}!`, "level");
+          };
+          this.world.updateFOV(this.player.x, this.player.y);
+        }
+
+        pause() {
+          this._paused = true;
+          this._screen("pause");
+        }
+        resume() {
+          this._paused = false;
+          this._screen("none");
+        }
+        showMenu() {
+          this._running = false;
+          this._screen("start");
+          if (this._raf) {
+            cancelAnimationFrame(this._raf);
+            this._raf = null;
+          }
+        }
+        _onDeath() {
+          this._running = false;
+          const p = this.player;
+          document.getElementById("death-stats").textContent =
+            `Depth ${this._depth} · Level ${p.level} · ${p.kills} kills · ${p.steps} steps`;
+          this._screen("death");
+          if (this._raf) {
+            cancelAnimationFrame(this._raf);
+            this._raf = null;
+          }
+        }
+        _screen(which) {
+          for (const id of ["start-screen", "pause-screen", "death-screen"])
+            document.getElementById(id).classList.add("hidden");
+          if (which === "start")
+            document.getElementById("start-screen").classList.remove("hidden");
+          if (which === "pause")
+            document.getElementById("pause-screen").classList.remove("hidden");
+          if (which === "death")
+            document.getElementById("death-screen").classList.remove("hidden");
+        }
+
+        _loop(ts) {
+          this._raf = requestAnimationFrame((t) => this._loop(t));
+          const dt = Math.min((ts - this._lastTime) / 1000, 0.1);
+          this._lastTime = ts;
+          if (this._paused || !this._running) return;
+          this._update(dt, ts / 1000);
+          this._render(ts / 1000);
+        }
+
+        _update(dt, time) {
+          const p = this.player;
+          p.update(dt);
+          // Movement
+          this._moveTimer -= dt;
+          if (this._moveTimer <= 0) {
+            let mx = 0,
+              my = 0;
+            if (this._keys["ArrowLeft"] || this._keys["KeyA"]) mx = -1;
+            if (this._keys["ArrowRight"] || this._keys["KeyD"]) mx = 1;
+            if (this._keys["ArrowUp"] || this._keys["KeyW"]) my = -1;
+            if (this._keys["ArrowDown"] || this._keys["KeyS"]) my = 1;
+            if (mx !== 0 || my !== 0) {
+              p.move(mx, my, this.world);
+              this.world.updateFOV(p.x, p.y);
+              this._moveTimer = 0.12 / p.spd;
+              // Check stair
+              const t = this.world.getTile(p.x, p.y);
+              if (
+                (t === T.STAIR && this._keys["Space"]) ||
+                (t === T.STAIR && this._keys["KeyF"])
+              ) {
+                this._descend();
+              }
+            }
+            // Attack
+            if (this._keys["Space"]) {
+              this._keys["Space"] = false;
+              // attack adjacent enemies
+              for (const [ddx, ddy] of [
+                [0, -1],
+                [0, 1],
+                [-1, 0],
+                [1, 0],
+              ]) {
+                const e = this.world.enemyAt(p.x + ddx, p.y + ddy);
+                if (e) {
+                  this.world.playerAttack(e);
+                  break;
+                }
+              }
+              // Check stairs
+              if (this.world.getTile(p.x, p.y) === T.STAIR) this._descend();
+            }
+            if (this._keys["KeyF"]) {
+              this._keys["KeyF"] = false;
+              if (this.world.getTile(p.x, p.y) === T.STAIR) this._descend();
+            }
+          }
+          // Enemy updates
+          for (const chunk of this.world._chunks.values())
+            for (const e of chunk.entities)
+              if (e.type === "enemy") e.update(dt, this.world, p);
+          // HP check
+          if (p.hp <= 0) this._onDeath();
+        }
+
+        _descend() {
+          this._depth++;
+          this.world.log(`Descending to depth ${this._depth}...`, "level");
+          const prevPlayer = this.player;
+          this.world = new World(this._depth);
+          this.world.player = prevPlayer;
+          this.world._messageCallback = (msg, cls) => this._log(msg, cls);
+          this.world._deathCallback = () => this._onDeath();
+          this.world._levelCallback = (lv) => {
+            this._log(`LEVEL UP! Level ${lv}!`, "level");
+          };
+          const startChunk = this.world.ensureChunk(0, 0);
+          const sr = startChunk._spawnRoom || { x: 2, y: 2 };
+          prevPlayer.x = sr.x + 1;
+          prevPlayer.y = sr.y + 1;
+          prevPlayer._animX = 0;
+          prevPlayer._animY = 0;
+          this.world.updateFOV(prevPlayer.x, prevPlayer.y);
+          this.player = prevPlayer;
+          // slight HP regen on descend
+          prevPlayer.hp = Math.min(prevPlayer.maxHp, prevPlayer.hp + 10);
+        }
+
+        _render(time) {
+          this.renderer.draw(this.world, this.player, time);
+          this.renderer.drawMinimap(
+            document.getElementById("minimap"),
+            this.world,
+            this.player,
+          );
+          this._updateHUD();
+        }
+
+        _updateHUD() {
+          const p = this.player;
+          document.getElementById("hp-fill").style.width =
+            (p.hp / p.maxHp) * 100 + "%";
+          document.getElementById("mp-fill").style.width =
+            (p.mp / p.maxMp) * 100 + "%";
+          document.getElementById("xp-fill").style.width =
+            (p.xp / p.xpNext) * 100 + "%";
+          document.getElementById("depth-display").textContent =
+            `DEPTH: ${this._depth}`;
+          document.getElementById("level-val").textContent = p.level;
+          document.getElementById("gold-val").textContent = p.gold;
+          document.getElementById("kills-val").textContent = p.kills;
+          document.getElementById("steps-val").textContent = p.steps;
+        }
+
+        _log(msg, cls = "") {
+          const log = document.getElementById("message-log");
+          const div = document.createElement("div");
+          div.className = "log-entry " + cls;
+          div.textContent = msg;
+          log.prepend(div);
+          // Keep max 6
+          while (log.children.length > 6) log.removeChild(log.lastChild);
+          // Remove after animation
+          setTimeout(() => div.remove(), 6100);
+        }
+      }
+
+      // ============================================================
+      // BOOT
+      // ============================================================
+      const game = new Game();
+    </script>
+  </body>
+</html>

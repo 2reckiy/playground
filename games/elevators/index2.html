@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vertical Hub - Milestone 1</title>
+    <style>
+      :root {
+        --bg-color: #0f172a;
+        --floor-border: #334155;
+        --elevator-color: #38bdf8;
+        --text-color: #f1f5f9;
+        --patience-high: #22c55e;
+        --patience-med: #eab308;
+        --patience-low: #ef4444;
+        --floor-height: 80px;
+      }
+
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        background: var(--bg-color);
+        color: var(--text-color);
+        font-family: "Courier New", Courier, monospace;
+        overflow: hidden;
+        height: 100%;
+      }
+
+      /* HUD */
+      #hud {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 15px;
+        background: rgba(15, 23, 42, 0.9);
+        border-bottom: 1px solid var(--floor-border);
+        display: flex;
+        justify-content: space-between;
+        z-index: 100;
+      }
+
+      /* Building Layout */
+      #building {
+        position: relative;
+        margin-top: 60px;
+        height: calc(100vh - 60px);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column-reverse; /* Floor 0 at bottom */
+      }
+
+      .floor {
+        height: var(--floor-height);
+        border-top: 1px solid var(--floor-border);
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding-left: 100px; /* Space for the shaft */
+        box-sizing: border-box;
+        cursor: pointer;
+      }
+
+      .floor:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .floor-label {
+        position: absolute;
+        left: 10px;
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      /* Shaft & Elevator */
+      #shaft {
+        position: absolute;
+        left: 40px;
+        top: 0;
+        bottom: 0;
+        width: 50px;
+        border-left: 1px dashed var(--floor-border);
+        border-right: 1px dashed var(--floor-border);
+        z-index: 10;
+      }
+
+      #cable {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        width: 1px;
+        background: #64748b;
+        transform: translateX(-50%);
+        z-index: 5;
+      }
+
+      #elevator {
+        position: absolute;
+        left: 45px;
+        width: 40px;
+        height: 50px;
+        background: var(--elevator-color);
+        border: 2px solid #0ea5e9;
+        z-index: 20;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+        transition: box-shadow 0.3s;
+      }
+
+      .waiting-for-input {
+        box-shadow: 0 0 15px var(--elevator-color);
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      /* Passengers */
+      .passenger-container {
+        display: flex;
+        gap: 5px;
+      }
+
+      .passenger {
+        width: 30px;
+        height: 30px;
+        border: 2px solid var(--patience-high);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+      }
+
+      .controls-hint {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        font-size: 12px;
+        color: #64748b;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hud">
+      <div>CREDITS: <span id="credits">0</span></div>
+      <div>FLOORS: <span id="floor-count">3</span></div>
+      <div>POPULATION: <span id="pop">0</span></div>
+    </div>
+
+    <div id="building">
+      <div id="shaft"></div>
+      <div id="cable"></div>
+      <div id="elevator">0/1</div>
+    </div>
+
+    <div class="controls-hint">
+      [LOGIC PILOT]: Click a floor to call elevator. When occupied, click
+      passenger's target floor.
+    </div>
+
+    <script>
+      // --- CONFIG & DATA ---
+      const CONFIG = {
+        floorHeight: 80,
+        elevatorSpeed: 4, // Pixels per frame
+        passengerSpawnRate: 0.005, // Chance per frame
+        maxCapacity: 1,
+        reward: 50,
+      };
+
+      let state = {
+        credits: 0,
+        floors: [0, 1, 2, 3, 4],
+        passengers: [],
+        elevator: {
+          y: 0, // Bottom of building is 0
+          targetY: 0,
+          currentFloor: 0,
+          occupants: [],
+          state: "IDLE", // IDLE, MOVING, LOADING
+        },
+      };
+
+      const buildingEl = document.getElementById("building");
+      const elevatorEl = document.getElementById("elevator");
+      const cableEl = document.getElementById("cable");
+      const creditsEl = document.getElementById("credits");
+
+      // --- CLASSES ---
+      class Passenger {
+        constructor(spawnFloor) {
+          this.id = Math.random().toString(36).substr(2, 9);
+          this.spawnFloor = spawnFloor;
+          this.targetFloor = this.generateTarget(spawnFloor);
+          this.patience = 100;
+          this.status = "WAITING"; // WAITING, IN_ELEVATOR, DONE
+        }
+
+        generateTarget(current) {
+          let target;
+          do {
+            target = Math.floor(Math.random() * state.floors.length);
+          } while (target === current);
+          return target;
+        }
+
+        update() {
+          if (this.status !== "DONE") {
+            this.patience -= 0.05; // Patience decay
+          }
+        }
+      }
+
+      // --- INITIALIZATION ---
+      function init() {
+        state.floors.forEach((f, i) => {
+          const div = document.createElement("div");
+          div.className = "floor";
+          div.id = `floor-${i}`;
+          div.innerHTML = `<span class="floor-label">FL ${i}</span><div class="passenger-container" id="queue-${i}"></div>`;
+          div.onclick = () => handleFloorClick(i);
+          buildingEl.appendChild(div);
+        });
+
+        // Position elevator at Floor 0
+        updateElevatorVisual(0);
+      }
+
+      // --- LOGIC ---
+      function handleFloorClick(floorIndex) {
+        // If elevator is empty, move to floor to pick up
+        if (state.elevator.occupants.length === 0) {
+          state.elevator.targetY = floorIndex * CONFIG.floorHeight + 15;
+          state.elevator.state = "MOVING";
+        }
+        // If elevator has someone, move to their requested floor ONLY if clicked
+        else if (state.elevator.occupants.length > 0) {
+          state.elevator.targetY = floorIndex * CONFIG.floorHeight + 15;
+          state.elevator.state = "MOVING";
+        }
+      }
+
+      function update() {
+        // 1. Spawn Passengers
+        if (Math.random() < CONFIG.passengerSpawnRate) {
+          const floor = Math.floor(Math.random() * state.floors.length);
+          state.passengers.push(new Passenger(floor));
+        }
+
+        // 2. Update Passengers & Patience
+        state.passengers = state.passengers.filter((p) => {
+          p.update();
+          if (p.patience <= 0) return false; // Rage quit
+          return p.status !== "DONE";
+        });
+
+        // 3. Elevator Physics
+        const diff = state.elevator.targetY - state.elevator.y;
+        if (Math.abs(diff) > CONFIG.elevatorSpeed) {
+          state.elevator.y += Math.sign(diff) * CONFIG.elevatorSpeed;
+          state.elevator.state = "MOVING";
+        } else {
+          state.elevator.y = state.elevator.targetY;
+          if (state.elevator.state === "MOVING") arriveAtFloor();
+        }
+
+        // 4. Update HUD
+        creditsEl.innerText = state.credits;
+        document.getElementById("pop").innerText = state.passengers.length;
+
+        render();
+        requestAnimationFrame(update);
+      }
+
+      function arriveAtFloor() {
+        const floorIndex = Math.round(state.elevator.y / CONFIG.floorHeight);
+        state.elevator.currentFloor = floorIndex;
+        state.elevator.state = "IDLE";
+
+        // Unload
+        const toUnload = state.elevator.occupants.filter(
+          (p) => p.targetFloor === floorIndex,
+        );
+        if (toUnload.length > 0) {
+          state.credits += CONFIG.reward * toUnload.length;
+          toUnload.forEach((p) => (p.status = "DONE"));
+          state.elevator.occupants = state.elevator.occupants.filter(
+            (p) => p.targetFloor !== floorIndex,
+          );
+        }
+
+        // Load
+        if (state.elevator.occupants.length < CONFIG.maxCapacity) {
+          const waiting = state.passengers.filter(
+            (p) => p.spawnFloor === floorIndex && p.status === "WAITING",
+          );
+          if (waiting.length > 0) {
+            const p = waiting[0];
+            p.status = "IN_ELEVATOR";
+            state.elevator.occupants.push(p);
+          }
+        }
+      }
+
+      // --- RENDERING ---
+      function render() {
+        // Update Elevator Pos
+        updateElevatorVisual(state.elevator.y);
+
+        // Highlight if waiting for player to choose destination
+        if (
+          state.elevator.occupants.length > 0 &&
+          state.elevator.state === "IDLE"
+        ) {
+          elevatorEl.classList.add("waiting-for-input");
+          elevatorEl.innerHTML = `<span style="font-size:10px">GO TO</span>${state.elevator.occupants[0].targetFloor}`;
+        } else {
+          elevatorEl.classList.remove("waiting-for-input");
+          elevatorEl.innerText = `${state.elevator.occupants.length}/${CONFIG.maxCapacity}`;
+        }
+
+        // Render Passengers on Floors
+        state.floors.forEach((f) => {
+          const container = document.getElementById(`queue-${f}`);
+          const waitingHere = state.passengers.filter(
+            (p) => p.spawnFloor === f && p.status === "WAITING",
+          );
+
+          container.innerHTML = waitingHere
+            .map((p) => {
+              const color =
+                p.patience > 70
+                  ? "var(--patience-high)"
+                  : p.patience > 30
+                    ? "var(--patience-med)"
+                    : "var(--patience-low)";
+              return `<div class="passenger" style="border-color: ${color}">${p.targetFloor}</div>`;
+            })
+            .join("");
+        });
+      }
+
+      function updateElevatorVisual(y) {
+        elevatorEl.style.bottom = `${y}px`;
+        // Cable length from top of building to elevator
+        const buildingHeight = buildingEl.scrollHeight;
+        cableEl.style.height = `calc(100% - ${y + 50}px)`;
+      }
+
+      init();
+      update();
+    </script>
+  </body>
+</html>

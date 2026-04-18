@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mathematical Pixel Pool with Splashes</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #0a0a0a;
+        font-family: "Courier New", monospace;
+      }
+      canvas {
+        display: block;
+      }
+      #stats {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        color: #00ffcc;
+        pointer-events: none;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 12px;
+        border: 1px solid #00ffcc;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stats">
+      DROPS VALUE: <span id="v-drops">0</span><br />
+      POOL VOLUME: <span id="v-pool">0</span><br />
+      DIMENSIONS: <span id="dim">0 x 0</span>
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const vDropsEl = document.getElementById("v-drops");
+      const vPoolEl = document.getElementById("v-pool");
+      const dimEl = document.getElementById("dim");
+
+      // Configuration
+      const PIXEL = 10;
+      const MIN_SPREAD_HEIGHT = 1; // The fixed height while spreading
+
+      let width, height;
+      let drops = [];
+      let totalVolume = 0;
+      let totalDrops = 0;
+      let surface, splashes;
+
+      // --- 1. Jitter & Surface Management ---
+      class SurfaceManager {
+        constructor(width) {
+          this.offsets = new Array(width).fill(0);
+          this.damping = 0.9;
+          this.propagation = 0.15;
+        }
+
+        applyImpulse(x, strength) {
+          if (this.offsets[x] !== undefined) {
+            this.offsets[x] = strength;
+          }
+        }
+
+        update() {
+          for (let i = 0; i < this.offsets.length; i++) {
+            this.offsets[i] *= this.damping;
+            // Wave propagation logic
+            if (i > 0)
+              this.offsets[i - 1] +=
+                (this.offsets[i] - this.offsets[i - 1]) * this.propagation;
+            if (i < this.offsets.length - 1)
+              this.offsets[i + 1] +=
+                (this.offsets[i] - this.offsets[i + 1]) * this.propagation;
+          }
+        }
+
+        getOffset(x) {
+          return this.offsets[x] || 0;
+        }
+      }
+
+      // --- 2. Grid Splash Management ---
+      class SplashManager {
+        constructor() {
+          this.particles = [];
+        }
+
+        create(gx, gy) {
+          for (let i = 0; i < 4; i++) {
+            this.particles.push({
+              x: gx,
+              y: gy,
+              vx: (Math.random() - 0.5) * 1.2,
+              vy: -Math.random() * 1.5,
+              size: 0.5 * PIXEL,
+              life: 1.0,
+            });
+          }
+        }
+
+        updateAndDraw(ctx) {
+          this.particles = this.particles.filter((p) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.1; // Gravity
+            p.life -= 0.05;
+
+            ctx.fillStyle = `rgba(0, 242, 255, ${p.life})`;
+            // Snap to grid for "Grid Splashes"
+            ctx.fillRect(
+              Math.floor(p.x) * PIXEL,
+              Math.floor(p.y) * PIXEL,
+              p.size,
+              p.size,
+            );
+
+            return p.life > 0;
+          });
+        }
+      }
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        width = Math.ceil(canvas.width / PIXEL);
+        height = Math.ceil(canvas.height / PIXEL);
+        surface = new SurfaceManager(width);
+        splashes = new SplashManager();
+      }
+
+      window.addEventListener("resize", resize);
+      resize();
+
+      class Drop {
+        constructor(x) {
+          this.gx = Math.floor(x / PIXEL);
+          this.gy = 0;
+          this.vel = 1;
+          this.value = 1;
+        }
+        update() {
+          this.gy += this.vel;
+          this.vel += 0.2;
+
+          // Calculate current pool height to find the surface
+          const currentPool = calculatePoolDimensions();
+          const surfaceY = height - currentPool.h;
+
+          if (this.gy >= surfaceY) {
+            totalDrops += 1;
+            totalVolume += this.value;
+            surface.applyImpulse(this.gx, 2);
+            splashes.create(this.gx, surfaceY);
+            return false;
+          }
+          return true;
+        }
+        draw() {
+          ctx.fillStyle = "#00f2ff";
+          ctx.fillRect(
+            this.gx * PIXEL,
+            Math.floor(this.gy) * PIXEL,
+            PIXEL,
+            PIXEL,
+          );
+        }
+      }
+
+      /**
+       * The Core Mathematical Method
+       * Calculates Pool Dimensions based on Volume Conservation
+       */
+      function calculatePoolDimensions() {
+        let pW, pH;
+
+        // Step 1: Try spreading at the minimum height
+        let potentialWidth = totalVolume / MIN_SPREAD_HEIGHT;
+
+        if (potentialWidth < width) {
+          // We are still in the "Spreading" phase
+          pW = potentialWidth;
+          pH = MIN_SPREAD_HEIGHT;
+        } else {
+          // We hit the walls! Switch to "Rising" phase
+          pW = width;
+          pH = totalVolume / width;
+        }
+
+        return { w: pW, h: pH };
+      }
+
+      function loop() {
+        ctx.fillStyle = "#0a0a0a";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const pool = calculatePoolDimensions();
+
+        // Update UI
+        vPoolEl.innerText = totalVolume;
+        vDropsEl.innerText = totalDrops;
+        dimEl.innerText = `${Math.floor(pool.w)} x ${pool.h.toFixed(1)}`;
+
+        surface.update();
+
+        // Draw Pool
+        if (totalVolume > 0) {
+          const startX = (width - pool.w) / 2;
+
+          for (let i = 0; i < pool.w; i++) {
+            const xIdx = Math.floor(startX + i);
+            const jitter = surface.getOffset(xIdx);
+
+            const x = (startX + i) * PIXEL;
+            const y = (height - pool.h + jitter) * PIXEL;
+            const w = PIXEL;
+            const h = (pool.h - jitter) * PIXEL;
+
+            ctx.fillStyle = "#00f2ff"; //"#005a8d";
+            ctx.fillRect(x, y, w, h);
+
+            // Surface highlight
+            // ctx.fillStyle = "#00f2ff";
+            // ctx.fillRect(x, y, w, 2);
+          }
+        }
+
+        drops = drops.filter((d) => d.update());
+        drops.forEach((d) => d.draw());
+        splashes.updateAndDraw(ctx);
+
+        requestAnimationFrame(loop);
+      }
+
+      window.addEventListener("mousedown", (e) => {
+        drops.push(new Drop(e.clientX));
+      });
+
+      setInterval(() => {
+        const x =
+          window.innerWidth * 0.3 + Math.random() * window.innerWidth * 0.4;
+        drops.push(new Drop(x));
+      }, 1000);
+
+      loop();
+    </script>
+  </body>
+</html>

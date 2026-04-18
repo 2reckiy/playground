@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vertical Hub - Milestone 1 (Canvas Edition)</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #0f172a;
+      }
+      canvas {
+        display: block;
+      }
+      #ui-overlay {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        color: #f1f5f9;
+        font-family: "Courier New", monospace;
+        pointer-events: none;
+        text-shadow: 1px 1px 2px black;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ui-overlay">
+      <div>CREDITS: <span id="credits-ui">0</span></div>
+      <div>DAY: <span id="day-ui">1</span></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+      /** --- BUSINESS LOGIC CLASSES --- **/
+
+      class Person {
+        constructor(id, spawnFloor, targetFloor) {
+          this.id = id;
+          this.spawnFloor = spawnFloor;
+          this.targetFloor = targetFloor;
+          this.patience = 100;
+          this.state = "WAITING"; // WAITING, IN_ELEVATOR, ARRIVED
+          this.color = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+        }
+
+        update(dt) {
+          if (this.state !== "ARRIVED") {
+            this.patience -= 0.05 * dt; // Patience decay over time
+          }
+        }
+      }
+
+      class Apartment {
+        constructor(id) {
+          this.id = id;
+          this.occupants = [];
+        }
+      }
+
+      class Floor {
+        constructor(index, y) {
+          this.index = index;
+          this.y = y;
+          this.apartments = [new Apartment(0), new Apartment(1)]; // Start with 2 per floor
+          this.waitingQueue = [];
+        }
+
+        addPerson(person) {
+          this.waitingQueue.push(person);
+        }
+      }
+
+      class Elevator {
+        constructor(id) {
+          this.id = id;
+          this.y = 0;
+          this.velocity = 0;
+          this.maxSpeed = 5;
+          this.capacity = 1;
+          this.occupants = [];
+          this.targetY = 0;
+          this.state = "IDLE"; // IDLE, MOVING, LOADING
+        }
+
+        update(dt) {
+          const diff = this.targetY - this.y;
+          if (Math.abs(diff) > 0.5) {
+            this.state = "MOVING";
+            const direction = Math.sign(diff);
+            this.y += direction * this.maxSpeed;
+          } else {
+            this.y = this.targetY;
+            if (this.state === "MOVING") {
+              this.state = "IDLE";
+              return true; // Signaling "Arrived"
+            }
+          }
+          return false;
+        }
+      }
+
+      class Building {
+        constructor(floorCount, floorHeight) {
+          this.floorHeight = floorHeight;
+          this.floors = [];
+          for (let i = 0; i < floorCount; i++) {
+            this.floors.push(new Floor(i, i * floorHeight));
+          }
+          this.elevators = [new Elevator(0)];
+        }
+
+        getFloorAtY(y) {
+          return Math.floor(y / this.floorHeight);
+        }
+      }
+
+      /** --- SYSTEM CLASSES --- **/
+
+      class Renderer {
+        constructor(canvas, building) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext("2d");
+          this.building = building;
+          this.colors = {
+            bg: "#0f172a",
+            floor: "#1e293b",
+            elevator: "#38bdf8",
+            text: "#f1f5f9",
+            patienceHigh: "#22c55e",
+            patienceMed: "#eab308",
+            patienceLow: "#ef4444",
+          };
+        }
+
+        draw(engine) {
+          const { ctx, canvas, building, colors } = this;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Draw Floors
+          building.floors.forEach((floor) => {
+            const screenY = canvas.height - floor.y - building.floorHeight;
+
+            // Floor line
+            ctx.strokeStyle = colors.floor;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0, screenY, canvas.width, building.floorHeight);
+
+            // Floor Label
+            ctx.fillStyle = "#64748b";
+            ctx.font = "12px monospace";
+            ctx.fillText(`FL ${floor.index}`, 10, screenY + 20);
+
+            // Draw Waiting People
+            floor.waitingQueue.forEach((person, i) => {
+              this.drawPerson(person, 100 + i * 35, screenY + 40);
+            });
+          });
+
+          // Draw Elevators
+          building.elevators.forEach((el) => {
+            const screenY = canvas.height - el.y - 50; // 50 is elevator height
+
+            // Cable
+            ctx.strokeStyle = "#475569";
+            ctx.beginPath();
+            ctx.moveTo(70, 0);
+            ctx.lineTo(70, screenY);
+            ctx.stroke();
+
+            // Cab
+            ctx.fillStyle = colors.elevator;
+            if (el.state === "IDLE" && el.occupants.length > 0) {
+              // Pulse effect for "Waiting for target"
+              const pulse = Math.sin(Date.now() / 200) * 5;
+              ctx.shadowBlur = 10 + pulse;
+              ctx.shadowColor = colors.elevator;
+            }
+            ctx.fillRect(50, screenY, 40, 50);
+            ctx.shadowBlur = 0;
+
+            // Content
+            ctx.fillStyle = colors.bg;
+            ctx.font = "bold 14px monospace";
+            const label =
+              el.occupants.length > 0
+                ? `TO:${el.occupants[0].targetFloor}`
+                : `0/1`;
+            ctx.fillText(label, 55, screenY + 30);
+          });
+        }
+
+        drawPerson(person, x, y) {
+          const ctx = this.ctx;
+          let color = this.colors.patienceHigh;
+          if (person.patience < 70) color = this.colors.patienceMed;
+          if (person.patience < 30) color = this.colors.patienceLow;
+
+          ctx.strokeStyle = color;
+          ctx.strokeRect(x, y, 25, 25);
+          ctx.fillStyle = color;
+          ctx.font = "10px monospace";
+          ctx.fillText(person.targetFloor, x + 8, y + 16);
+        }
+      }
+
+      class GameEngine {
+        constructor() {
+          this.canvas = document.getElementById("gameCanvas");
+          this.building = new Building(6, 100);
+          this.renderer = new Renderer(this.canvas, this.building);
+
+          this.credits = 0;
+          this.lastTime = 0;
+          this.spawnTimer = 0;
+
+          window.addEventListener("resize", () => this.resize());
+          this.canvas.addEventListener("mousedown", (e) => this.handleClick(e));
+          this.resize();
+        }
+
+        resize() {
+          this.canvas.width = window.innerWidth;
+          this.canvas.height = window.innerHeight;
+        }
+
+        handleClick(e) {
+          const rect = this.canvas.getBoundingClientRect();
+          const mouseY = e.clientY - rect.top;
+          const logicalY = this.canvas.height - mouseY;
+          const clickedFloor = this.building.getFloorAtY(logicalY);
+
+          if (clickedFloor >= 0 && clickedFloor < this.building.floors.length) {
+            const el = this.building.elevators[0];
+            el.targetY = clickedFloor * this.building.floorHeight;
+          }
+        }
+
+        update(time) {
+          const dt = (time - this.lastTime) / 16; // Normalized to ~60fps
+          this.lastTime = time;
+
+          // Spawn logic
+          this.spawnTimer += dt;
+          if (this.spawnTimer > 100) {
+            const start = Math.floor(
+              Math.random() * this.building.floors.length,
+            );
+            const target =
+              (start +
+                1 +
+                Math.floor(Math.random() * (this.building.floors.length - 1))) %
+              this.building.floors.length;
+            this.building.floors[start].addPerson(
+              new Person(Date.now(), start, target),
+            );
+            this.spawnTimer = 0;
+          }
+
+          // Update Elevators
+          this.building.elevators.forEach((el) => {
+            const arrived = el.update(dt);
+            if (arrived) this.handleArrival(el);
+          });
+
+          // Update People Patience
+          this.building.floors.forEach((f) => {
+            f.waitingQueue = f.waitingQueue.filter((p) => {
+              p.update(dt);
+              return p.patience > 0;
+            });
+          });
+
+          this.updateUI();
+          this.renderer.draw(this);
+          requestAnimationFrame((t) => this.update(t));
+        }
+
+        handleArrival(el) {
+          const floorIdx = el.y / this.building.floorHeight;
+          const floor = this.building.floors[floorIdx];
+
+          // 1. Unload
+          el.occupants = el.occupants.filter((p) => {
+            if (p.targetFloor === floorIdx) {
+              this.credits += 50;
+              return false;
+            }
+            return true;
+          });
+
+          // 2. Load
+          if (el.occupants.length < el.capacity) {
+            if (floor.waitingQueue.length > 0) {
+              const p = floor.waitingQueue.shift();
+              p.state = "IN_ELEVATOR";
+              el.occupants.push(p);
+            }
+          }
+        }
+
+        updateUI() {
+          document.getElementById("credits-ui").innerText = this.credits;
+        }
+
+        start() {
+          requestAnimationFrame((t) => this.update(t));
+        }
+      }
+
+      // Start the game
+      const game = new GameEngine();
+      game.start();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vertical Hub - Milestone 1 (Canvas Edition)</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #fff;
+      }
+      canvas {
+        display: block;
+      }
+      #ui-overlay {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        color: #f1f5f9;
+        font-family: "Courier New", monospace;
+        pointer-events: none;
+        text-shadow: 1px 1px 2px black;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ui-overlay">
+      <div>CREDITS: <span id="credits-ui">0</span></div>
+      <div>DAY: <span id="day-ui">1</span></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+      const WORLD_CONFIG = {
+        buildingConfig: {
+          spawnRate: 2000,
+          arrivalRate: 0.25,
+          activityRate: 0.33,
+          personHeight: 25,
+          floorHeight: 100,
+          floorLineHeight: 4,
+          roofLineHeight: 8,
+          shaftWidth: 50,
+          cabWidth: 40,
+          cabHeight: 50,
+        },
+        floorsConfig: [
+          { id: 0, type: "LOBBY", capacity: 0 },
+          {
+            id: 1,
+            type: "RESIDENTIAL",
+            capacity: 2,
+          },
+        ],
+        elevatorsConfig: [
+          {
+            id: "E1",
+            startFloor: 0,
+            capacity: 1,
+            maxSpeed: 0.33,
+            doorsTime: 2,
+            loadUnloadTime: 1,
+          },
+        ],
+      };
+
+      class Renderer {
+        constructor(canvas, building) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext("2d");
+          this.building = building;
+          this.colors = {
+            bg: "#0f172a",
+            roof: "#334155",
+            floor: "#475569",
+            floorEven: "#cacaca",
+            floorOdd: "#e5e5e5",
+            elevator: "#9e9e9e",
+            elevatorPulse: "#38bdf8",
+            text: "#f1f5f9",
+            patienceHigh: "#22c55e",
+            patienceMed: "#eab308",
+            patienceLow: "#ef4444",
+          };
+        }
+
+        draw(engine) {
+          const { ctx, canvas, building, colors } = this;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          const {
+            floorLineHeight,
+            roofLineHeight,
+            shaftWidth,
+            cabWidth,
+            cabHeight,
+            personHeight,
+          } = engine.config;
+          const buildingHeight =
+            building.floors.length * (building.floorHeight + floorLineHeight);
+          const buildingHeightY = canvas.height - buildingHeight;
+
+          // Draw Elevators
+          building.elevators.forEach((el, i) => {
+            const cabTopY =
+              canvas.height -
+              el.currentFloorPos * building.floorHeight -
+              cabHeight -
+              floorLineHeight;
+            const elevatorMiddle = i * 70 + 70;
+
+            // Shaft
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(
+              elevatorMiddle - shaftWidth / 2,
+              buildingHeightY,
+              shaftWidth,
+              canvas.height,
+            );
+
+            // Cable
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "#475569";
+            ctx.beginPath();
+            ctx.moveTo(i * 70 + 70, buildingHeightY);
+            ctx.lineTo(i * 70 + 70, cabTopY);
+            ctx.stroke();
+
+            // Indicators
+            el.occupants.forEach((person) => {
+              const indicatorY =
+                canvas.height - person.targetFloor * building.floorHeight - building.floorHeight / 2;
+              ctx.fillStyle = "#4af0c0";
+              ctx.fillRect(
+                elevatorMiddle - 4,
+                indicatorY - 4,
+                8,
+                8,
+              );
+            });
+
+            // Cab Light
+
+            // Cab Doors
+            ctx.fillStyle = colors.elevator;
+            if (el.state === "IDLE" && el.occupants.length > 0) {
+              // Pulse effect for "Waiting for target"
+              const pulse = Math.sin(Date.now() / 200) * 5;
+              ctx.shadowBlur = 1 + pulse;
+              ctx.shadowColor = colors.elevatorPulse;
+            }
+            ctx.fillRect(
+              elevatorMiddle - cabWidth / 2,
+              cabTopY,
+              cabWidth,
+              cabHeight,
+            );
+            ctx.shadowBlur = 0;
+
+            // Doors
+            if (
+              el.state === "OPENING" ||
+              el.state === "LOAD_UNLOAD" ||
+              el.state === "CLOSING"
+            ) {
+              const doorProgress =
+                el.state === "OPENING"
+                  ? el.doorTimer / el.doorsTime
+                  : el.state === "CLOSING"
+                    ? 1 - el.doorTimer / el.doorsTime
+                    : 1;
+              const doorWidth = cabWidth * doorProgress;
+              ctx.fillStyle = colors.bg;
+              ctx.fillRect(
+                elevatorMiddle - doorWidth / 2,
+                cabTopY,
+                doorWidth,
+                cabHeight,
+              );
+            }
+
+            // Content
+            ctx.fillStyle = colors.bg;
+            ctx.font = "bold 14px monospace";
+            const label = `${el.occupants.length}/${el.capacity}`;
+            ctx.textAlign = "center";
+            ctx.fillText(label, elevatorMiddle, cabTopY + 30);
+          });
+
+          // Draw Floors
+          building.floors.forEach((floor, floorIndex) => {
+            const floorLineY =
+              canvas.height -
+              floorIndex * building.floorHeight -
+              floorLineHeight / 2;
+
+            // Floor line
+            ctx.strokeStyle = colors.floor;
+            ctx.lineWidth = floorLineHeight;
+            ctx.beginPath();
+            ctx.moveTo(0, floorLineY);
+            ctx.lineTo(canvas.width, floorLineY);
+            ctx.stroke();
+
+            // Roof line
+            if (floorIndex === building.floors.length - 1) {
+              const roofLineHalfHeight = roofLineHeight / 2;
+              const roofY =
+                floorLineY - building.floorHeight - roofLineHalfHeight;
+              ctx.strokeStyle = colors.roof;
+              ctx.lineWidth = roofLineHeight;
+              ctx.beginPath();
+              ctx.moveTo(0, roofY);
+              ctx.lineTo(canvas.width, roofY);
+              ctx.stroke();
+            }
+
+            // Floor Label
+            ctx.textAlign = "left";
+            ctx.fillStyle = "#64748b";
+            ctx.font = "12px monospace";
+            ctx.fillText(
+              `FL ${floor.index}`,
+              10,
+              floorLineY - building.floorHeight / 2,
+            );
+
+            // Draw Waiting People
+            floor.waitingQueue.forEach((person, i) => {
+              this.drawPerson(
+                person,
+                100 + i * 35,
+                floorLineY - personHeight - floorLineHeight / 2,
+                personHeight,
+              );
+            });
+          });
+        }
+
+        drawPerson(person, x, y, personHeight) {
+          const ctx = this.ctx;
+
+          // ctx.strokeStyle = color;
+          // ctx.lineWidth = 1;
+          // ctx.strokeRect(x, y, 15, personHeight);
+          ctx.fillStyle = "#0020ed";
+          ctx.fillRect(x, y, 15, personHeight);
+
+          ctx.fillStyle = this.colors.patienceLow;
+          ctx.fillRect(x, y, 15, (1 - person.patience / 100) * personHeight);
+
+          ctx.fillStyle = "#fff";
+          ctx.font = "10px monospace";
+          ctx.textAlign = "center";
+          ctx.fillText(person.targetFloor, x + 8, y + personHeight / 2);
+        }
+      }
+
+      class GameEngine {
+        constructor({ buildingConfig, floorsConfig, elevatorsConfig }) {
+          // 1. Setup Simulation Data
+          this.config = buildingConfig;
+
+          this.building = new Building(
+            floorsConfig,
+            elevatorsConfig,
+            buildingConfig,
+          );
+
+          // 2. Setup Systems
+          this.canvas = document.getElementById("gameCanvas");
+          this.renderer = new Renderer(this.canvas, this.building);
+
+          this.credits = 0;
+          this.lastTime = performance.now();
+
+          this.arrivalTimer = 0;
+          this.activityTimer = 0;
+
+          this.isPaused = false;
+
+          this.initListeners();
+        }
+
+        resize() {
+          this.canvas.width = window.innerWidth;
+          this.canvas.height = window.innerHeight;
+        }
+
+        initListeners() {
+          window.addEventListener("resize", () => this.resize());
+
+          window.addEventListener("keydown", (e) => {
+            if (e.key === " ") this.isPaused = !this.isPaused;
+          });
+
+          this.canvas.addEventListener("mousedown", (e) =>
+            this.handleFloorClick(e),
+          );
+
+          this.resize();
+        }
+
+        handleFloorClick(e) {
+          const rect = this.canvas.getBoundingClientRect();
+          const mouseY = e.clientY - rect.top;
+          const logicalY = this.canvas.height - mouseY;
+          const floorIdx = this.building.getFloorAtY(logicalY);
+          // TODO: choose closest elevator instead of hardcoding to first one
+          const elevator = this.building.elevators[0];
+
+          const isFloorCorrect =
+            floorIdx >= 0 && floorIdx < this.building.floors.length;
+
+          if (!isFloorCorrect) return;
+
+          elevator.processCall(floorIdx);
+        }
+
+        update(time) {
+          const dt = (time - this.lastTime) / 1000; // Convert to seconds
+          this.lastTime = time;
+
+          if (!this.isPaused) {
+            // Spawn Logic based on Config
+            this._spawnPassengers(dt);
+
+            // Elevators Updates
+            this.building.elevators.forEach((el) => {
+              el.update(dt);
+
+              if (el.state === "READY_TO_LOAD_UNLOAD") {
+                this._processLoadUnload(el);
+              }
+            });
+
+            // Floors queue updates
+            this._updatePatience(dt);
+          }
+
+          this.renderer.draw(this);
+          requestAnimationFrame((t) => this.update(t));
+        }
+
+        _spawnPassengers(dt) {
+          // 1. ARRIVALS (Only at Floor 0)
+          if (this.building.currentPopulation < this.building.capacity) {
+            this.arrivalTimer += this.config.arrivalRate * dt;
+
+            while (this.arrivalTimer >= 1.0) {
+              const availableFloors = this.building.getAvailableFloors();
+
+              if (availableFloors.length > 0) {
+                const targetFloor =
+                  availableFloors[
+                    Math.floor(Math.random() * availableFloors.length)
+                  ];
+
+                targetFloor.reserve();
+
+                this.building.floors[0].waitingQueue.push(
+                  new Person(Date.now(), 0, targetFloor.index, "ARRIVING"),
+                );
+              }
+              this.arrivalTimer -= 1;
+            }
+          }
+
+          // 2. ACTIVITY (Residents departing, visiting floors)
+          this._handleSpawnActivity(dt);
+        }
+
+        _handleSpawnActivity(dt) {
+          if (this.building.currentPopulation === 0) return;
+
+          for (let i = 0; i < this.building.floors.length; i++) {
+            const f = this.building.floors[i];
+            // We only trigger activity for people physically present on the floor
+
+            for (let [id, person] of f.presence) {
+              // TODO: activityTimer accumulates across all residents per frame, move to Person
+              this.activityTimer += this.config.activityRate * dt;
+
+              while (this.activityTimer >= 1.0) {
+                // TODO: Decide: Is this person moving out (DEPARTING) or just VISITING?
+                const isMovingOut = f.index !== 0 && Math.random() < 0.2; // 20% chance they leave building forever
+
+                if (isMovingOut) {
+                  person.depart();
+                } else {
+                  person.visit(f.index, this.building.floors.length);
+                }
+
+                // 3. Physical Transition
+                f.removePhysicalPresence(id);
+                f.waitingQueue.push(person);
+
+                this.activityTimer -= 1;
+              }
+            }
+          }
+        }
+
+        _processLoadUnload(el) {
+          el.startLoadUnload();
+
+          const floorIdx = el.currentFloor;
+          const floor = this.building.floors[floorIdx];
+
+          // 1. Unload
+          el.occupants = el.occupants.filter((person) => {
+            if (person.targetFloor !== floorIdx) {
+              return true;
+            }
+
+            if (person.purpose === "ARRIVING") {
+              const isMovedIn = floor.tryToMoveIn(person);
+              if (isMovedIn) {
+                person.handleSuccessfulArrival(floor.index);
+              } else {
+                // If no space, person leaves the building
+                person.leave();
+                return true; // Keep in elevator to leave
+              }
+            } else if (person.purpose === "VISITING") {
+              floor.addPhysicalPresence(person);
+            } else if (person.purpose === "DEPARTING") {
+              floor.moveOut();
+            }
+
+            this.credits += 50;
+            return false;
+          });
+
+          // 2. Load
+          while (
+            el.occupants.length < el.capacity &&
+            floor.waitingQueue.length > 0
+          ) {
+            const p = floor.waitingQueue.shift();
+            p.state = "IN_ELEVATOR";
+            el.occupants.push(p);
+            // TODO: AUTO Add new target floor to elevator queue if not already present (base on upgrades)
+          }
+
+          setTimeout(() => el.completeLoadUnload(), el.loadUnloadTime * 1000); // Simulate load/unload time
+        }
+
+        _updatePatience(dt) {
+          // TODO: optimize by checking only per 10th frame
+          this.building.floors.forEach((f) => {
+            // We iterate backwards because we might remove people from the queue
+            for (let i = f.waitingQueue.length - 1; i >= 0; i--) {
+              const p = f.waitingQueue[i];
+
+              // Patience decay logic
+              p.update(dt);
+
+              if (p.patience <= 0) {
+                this._handlePatienceBreak(p, f);
+                f.waitingQueue.splice(i, 1); // Remove from queue
+              }
+            }
+          });
+        }
+
+        _handlePatienceBreak(person, currentFloor) {
+          switch (person.purpose) {
+            case "ARRIVING":
+              // They never moved in. Unreserve the spot so a new person can try.
+              const targetFloor = this.building.floors[person.targetFloor];
+              targetFloor.unreserve();
+              this.credits -= 100; // "Refund" or reputation penalty
+              break;
+
+            case "VISITING":
+              // They give up on the visit and just stay where they were physically
+              currentFloor.addPhysicalPresence(person);
+
+              person.handleUnsuccessfulVisit();
+              break;
+
+            case "DEPARTING":
+              // They tried to leave but the elevator was too slow.
+              currentFloor.addPhysicalPresence(person);
+
+              person.handleUnsuccessfulDeparture();
+              // this.applyAngryDebuff(person);
+              break;
+          }
+        }
+      }
+
+      class Person {
+        constructor(id, startFloor, targetFloor, purpose) {
+          this.id = id;
+          this.targetFloor = targetFloor;
+          this.homeFloor = null;
+
+          this.patience = 100;
+          this.patienceDecay = 10;
+          this.state = "WAITING"; // WAITING, IN_ELEVATOR, ARRIVED
+          this.purpose = purpose; // 'ARRIVING' (to apartment) or 'DEPARTING' (to Floor 0), STAYING, LEAVING, VISITING
+        }
+
+        update(dt) {
+          if (this.state === "WAITING") {
+            this.patience -= this.patienceDecay * dt; // Patience decay over time
+          }
+        }
+
+        leave() {
+          this.targetFloor = 0;
+          this.purpose = "LEAVING";
+        }
+
+        visit(currentFloorIndex, floorsCount) {
+          let target;
+
+          do {
+            target = Math.floor(Math.random() * floorsCount);
+          } while (target === currentFloorIndex);
+
+          this.targetFloor = target;
+          this.purpose = "VISITING";
+          this.state = "WAITING";
+        }
+
+        depart() {
+          this.targetFloor = 0;
+          this.purpose = "DEPARTING";
+          this.state = "WAITING";
+        }
+
+        handleSuccessfulArrival(homeFloor) {
+          this.homeFloor = homeFloor;
+          this.purpose = "STAYING";
+          this.state = "ARRIVED";
+        }
+
+        handleUnsuccessfulDeparture() {
+          this.purpose = "STAYING";
+          this.isAngry = true;
+        }
+
+        handleUnsuccessfulVisit() {
+          this.state = "ARRIVED";
+          this.purpose = "STAYING";
+          this.patience = 50; // Partial reset
+        }
+      }
+
+      class Floor {
+        constructor(config, index) {
+          this.id = config.id;
+          this.index = index;
+          this.type = config.type;
+          this.capacity = config.capacity;
+          this.residents = config.residents ?? 0;
+          this.reservedCount = 0;
+
+          this.presence = new Map();
+
+          this.waitingQueue = [];
+        }
+
+        addPerson(person) {
+          this.waitingQueue.push(person);
+        }
+
+        reserve() {
+          this.reservedCount++;
+        }
+
+        unreserve() {
+          this.reservedCount--;
+        }
+
+        tryToMoveIn(person) {
+          this.reservedCount--;
+
+          if (this.residents < this.capacity) {
+            this.residents += 1;
+            this.addPhysicalPresence(person);
+            return true;
+          }
+          return false;
+        }
+
+        moveOut() {
+          this.residents = Math.max(0, this.residents - 1);
+        }
+
+        addPhysicalPresence(person) {
+          this.presence.set(person.id, person);
+        }
+
+        removePhysicalPresence(personId) {
+          this.presence.delete(personId);
+        }
+
+        get hasSpace() {
+          return this.residents + this.reservedCount < this.capacity;
+        }
+      }
+
+      class Elevator {
+        constructor(config, floorHeight) {
+          this.id = config.id;
+          this.capacity = config.capacity;
+          this.maxSpeed = config.maxSpeed;
+          this.doorsTime = config.doorsTime;
+          this.loadUnloadTime = config.loadUnloadTime;
+
+          this.state = "IDLE"; // IDLE, MOVING, OPENING, CLOSING, READY_TO_LOAD_UNLOAD, LOAD_UNLOAD
+          this.currentFloorPos = config.startFloor;
+          this.currentFloor = config.startFloor;
+          this.targetFloorIndex = config.startFloor;
+          this.occupants = [];
+          this.floorsQueue = [];
+          this.movingProgress = 0;
+          this.doorTimer = 0;
+        }
+
+        update(dt) {
+          if (this.state === "IDLE") {
+            if (this.floorsQueue.length > 0) {
+              const nextFloor = this.floorsQueue.shift();
+              this.targetFloorIndex = nextFloor;
+              this.state = "MOVING";
+              return;
+            }
+          }
+
+          if (this.state === "MOVING") {
+            const diff = this.targetFloorIndex - this.currentFloorPos;
+            const step = this.maxSpeed * dt;
+
+            if (Math.abs(diff) > step) {
+              this.currentFloorPos += Math.sign(diff) * step;
+            } else {
+              this.state = "OPENING";
+              this.doorTimer = 0;
+              this.y = this.targetY;
+              this.currentFloorPos = this.targetFloorIndex;
+              this.currentFloor = this.targetFloorIndex;
+            }
+          }
+
+          if (this.state === "OPENING") {
+            this.doorTimer += dt;
+            if (this.doorTimer >= this.doorsTime) {
+              this.state = "READY_TO_LOAD_UNLOAD";
+              this.doorTimer = 0;
+            }
+          }
+
+          if (this.state === "LOAD_UNLOAD") {
+            // After processing arrival logic in GameEngine, reset to IDLE
+          }
+
+          if (this.state === "CLOSING") {
+            this.doorTimer += dt;
+            if (this.doorTimer >= this.doorsTime) {
+              this.state = "IDLE";
+              this.doorTimer = 0;
+            }
+          }
+        }
+
+        processCall(floorIdx) {
+          if (!this.floorsQueue.includes(floorIdx)) {
+            this.floorsQueue.push(floorIdx);
+          }
+        }
+
+        startLoadUnload() {
+          this.state = "LOAD_UNLOAD";
+          this.doorTimer = 0;
+        }
+
+        completeLoadUnload() {
+          this.doorTimer = 0;
+          this.state = "CLOSING";
+        }
+      }
+
+      class Building {
+        constructor(floorsConfig, elevatorsConfig, bConfig) {
+          this.floorHeight = bConfig.floorHeight;
+
+          // Map data to entities
+          this.floors = floorsConfig.map((f, index) => new Floor(f, index));
+          this.elevators = elevatorsConfig.map(
+            (e) => new Elevator(e, this.floorHeight),
+          );
+
+          this.capacity = this.floors.reduce((sum, f) => sum + f.capacity, 0);
+        }
+
+        get currentPopulation() {
+          // Total slots taken by people living here
+          const totalResidents = this.floors.reduce(
+            (sum, f) => sum + f.residents + f.reservedCount,
+            0,
+          );
+
+          // Plus any transients who AREN'T residents (e.g., people arriving for the first time)
+          // But wait—if we use your "Arrivals check space" rule, even they are accounted for
+          // in the reservedCount the moment they spawn.
+
+          return totalResidents;
+        }
+
+        getFloorAtY(y) {
+          return Math.floor(y / this.floorHeight);
+        }
+
+        getAvailableFloors() {
+          return this.floors.filter((f) => f.hasSpace);
+        }
+      }
+
+      // INSTANTIATION
+      const game = new GameEngine(WORLD_CONFIG);
+      game.update(performance.now());
+    </script>
+  </body>
+</html>

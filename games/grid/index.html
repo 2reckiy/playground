@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Endless Grid</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #080c12;
+        overflow: hidden;
+        font-family: "Share Tech Mono", "Courier New", monospace;
+        color: #c8d8e8;
+        user-select: none;
+      }
+      #gameCanvas {
+        display: block;
+        cursor: grab;
+        position: fixed;
+        inset: 0;
+      }
+      #gameCanvas.dragging {
+        cursor: grabbing;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+      "use strict";
+
+      const CONST = Object.freeze({
+        TILE_SIZE: 72,
+        ZOOM_MIN: 0.2,
+        ZOOM_MAX: 3.5,
+        ZOOM_SPEED: 0.0012,
+        DRAG_THRESHOLD_PX: 4,
+        GRID_ALPHA: 0.04,
+        TILE_PAD: 0.5,
+        TICK_INTERVAL_MS: 1000,
+      });
+
+      class Camera {
+        constructor(x = 0, y = 0) {
+          this.x = x;
+          this.y = y;
+          this.zoom = CONST.ZOOM_MIN;
+        }
+        worldToScreen(wx, wy, cw, ch) {
+          return {
+            sx: (wx - this.x) * this.zoom + cw / 2,
+            sy: (wy - this.y) * this.zoom + ch / 2,
+          };
+        }
+        screenToWorld(sx, sy, cw, ch) {
+          return {
+            wx: (sx - cw / 2) / this.zoom + this.x,
+            wy: (sy - ch / 2) / this.zoom + this.y,
+          };
+        }
+        pan(dx, dy) {
+          this.x -= dx / this.zoom;
+          this.y -= dy / this.zoom;
+        }
+        zoomAt(sx, sy, delta, cw, ch) {
+          const { wx, wy } = this.screenToWorld(sx, sy, cw, ch);
+          this.zoom = Math.max(
+            CONST.ZOOM_MIN,
+            Math.min(
+              CONST.ZOOM_MAX,
+              this.zoom * (1 - delta * CONST.ZOOM_SPEED),
+            ),
+          );
+          const a = this.worldToScreen(wx, wy, cw, ch);
+          this.x += (a.sx - sx) / this.zoom;
+          this.y += (a.sy - sy) / this.zoom;
+        }
+        visibleRect(cw, ch) {
+          const ts = CONST.TILE_SIZE,
+            tl = this.screenToWorld(0, 0, cw, ch),
+            br = this.screenToWorld(cw, ch, cw, ch);
+          return {
+            x0: Math.floor(tl.wx / ts) - 1,
+            y0: Math.floor(tl.wy / ts) - 1,
+            x1: Math.ceil(br.wx / ts) + 1,
+            y1: Math.ceil(br.wy / ts) + 1,
+          };
+        }
+      }
+
+      class Renderer {
+        constructor(canvas) {
+          this._c = canvas;
+          this._ctx = canvas.getContext("2d");
+          this._resize();
+          window.addEventListener("resize", () => this._resize());
+        }
+        get width() {
+          return this._c.width;
+        }
+        get height() {
+          return this._c.height;
+        }
+        _resize() {
+          this._c.width = window.innerWidth;
+          this._c.height = window.innerHeight;
+        }
+        clear() {
+          this._ctx.fillStyle = "#000";
+          this._ctx.fillRect(0, 0, this.width, this.height);
+        }
+
+        renderGrid(cam, hovered) {
+          const ctx = this._ctx,
+            ts = CONST.TILE_SIZE,
+            cw = this.width,
+            ch = this.height;
+          const r = cam.visibleRect(cw, ch);
+          const sz = ts * cam.zoom;
+          for (let y = r.y0; y <= r.y1; y++) {
+            for (let x = r.x0; x <= r.x1; x++) {
+              const { sx, sy } = cam.worldToScreen(x * ts, y * ts, cw, ch);
+
+              // Draw tile
+              this._drawTile(
+                ctx,
+                x,
+                y,
+                sx,
+                sy,
+                sz,
+                hovered && hovered.gx === x && hovered.gy === y,
+              );
+              // Draw grid lines
+              if (CONST.TILE_PAD) {
+                ctx.strokeStyle = `rgba(255,255,255,${CONST.GRID_ALPHA})`;
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(sx + 0.5, sy + 0.5, sz - 1, sz - 1);
+              }
+            }
+          }
+        }
+
+        _drawTile(ctx, x, y, sx, sy, sz, isHov) {
+          const pad = CONST.TILE_PAD,
+            px = sx + pad,
+            py = sy + pad,
+            pw = sz - pad * 2,
+            ph = sz - pad * 2;
+          // Generate color based on position
+          const hue = Math.abs(Math.sin(x * y) * 1000) % 360;
+          ctx.fillStyle = isHov
+            ? `hsl(${hue}, 40%, 25%)`
+            : `hsl(${hue}, 30%, 20%)`;
+          // Overlap slightly to prevent gaps between tiles at high zoom
+          if (CONST.TILE_PAD) {
+            ctx.fillRect(px, py, pw, ph);
+          } else {
+            ctx.fillRect(px - 0.5, py - 0.5, pw + 1, ph + 1);
+          }
+        }
+      }
+
+      class InputManager {
+        constructor(canvas, cam, bus) {
+          this._c = canvas;
+          this._cam = cam;
+          this._bus = bus;
+          this._drag = false;
+          this._mx = 0;
+          this._my = 0;
+          this._dsx = 0;
+          this._dsy = 0;
+          this._bind();
+        }
+        _coords(ex, ey) {
+          const r = this._c.getBoundingClientRect(),
+            sx = ex - r.left,
+            sy = ey - r.top;
+          const { wx, wy } = this._cam.screenToWorld(
+            sx,
+            sy,
+            this._c.width,
+            this._c.height,
+          );
+          const ts = CONST.TILE_SIZE;
+          return {
+            gx: Math.floor(wx / ts),
+            gy: Math.floor(wy / ts),
+            sx: ex,
+            sy: ey,
+          };
+        }
+        _bind() {
+          const c = this._c;
+          c.addEventListener("mousedown", (e) => {
+            this._drag = false;
+            this._dsx = e.clientX;
+            this._dsy = e.clientY;
+            this._mx = e.clientX;
+            this._my = e.clientY;
+            c.classList.add("dragging");
+          });
+          c.addEventListener("mousemove", (e) => {
+            if (e.buttons === 1) {
+              if (
+                Math.hypot(e.clientX - this._dsx, e.clientY - this._dsy) >
+                CONST.DRAG_THRESHOLD_PX
+              )
+                this._drag = true;
+              this._cam.pan(e.clientX - this._mx, e.clientY - this._my);
+            }
+            this._mx = e.clientX;
+            this._my = e.clientY;
+            this._bus.emit("input:hover", this._coords(e.clientX, e.clientY));
+          });
+          c.addEventListener("mouseup", () => c.classList.remove("dragging"));
+          c.addEventListener("mouseleave", () => {
+            c.classList.remove("dragging");
+            this._bus.emit("input:hoverEnd", {});
+          });
+          c.addEventListener("click", (e) => {
+            if (!this._drag) {
+              this._bus.emit("input:click", this._coords(e.clientX, e.clientY));
+            }
+          });
+          c.addEventListener(
+            "wheel",
+            (e) => {
+              e.preventDefault();
+              const r = c.getBoundingClientRect();
+              this._cam.zoomAt(
+                e.clientX - r.left,
+                e.clientY - r.top,
+                e.deltaY,
+                c.width,
+                c.height,
+              );
+            },
+            { passive: false },
+          );
+        }
+      }
+
+      class EventBus {
+        constructor() {
+          this._listeners = {};
+        }
+        on(event, callback) {
+          if (!this._listeners[event]) this._listeners[event] = [];
+          this._listeners[event].push(callback);
+        }
+        emit(event, data) {
+          if (this._listeners[event])
+            this._listeners[event].forEach((cb) => cb(data));
+        }
+      }
+
+      class GameLoop {
+        constructor(onTick, onRender) {
+          this._onTick = onTick;
+          this._onRender = onRender;
+          this._running = false;
+          this._lastTick = 0;
+          this._lastFrame = 0;
+          this._raf = null;
+        }
+        start() {
+          this._running = true;
+          this._lastTick = performance.now();
+          this._raf = requestAnimationFrame((t) => this._loop(t));
+        }
+        stop() {
+          this._running = false;
+          if (this._raf) cancelAnimationFrame(this._raf);
+        }
+        _loop(now) {
+          if (!this._running) return;
+          const e = now - this._lastTick;
+          if (e >= CONST.TICK_INTERVAL_MS) {
+            this._onTick(now);
+            this._lastTick = now - (e % CONST.TICK_INTERVAL_MS);
+          }
+          const dt = now - this._lastFrame;
+          this._lastFrame = now;
+          this._onRender(now, dt);
+          this._raf = requestAnimationFrame((t) => this._loop(t));
+        }
+      }
+
+      class Game {
+        constructor() {
+          this.hovered = null;
+          this.clickedTiles = new Set();
+
+          this.bus = new EventBus();
+          this.camera = new Camera();
+          this.renderer = new Renderer(document.getElementById("gameCanvas"));
+          this.input = new InputManager(
+            document.getElementById("gameCanvas"),
+            this.camera,
+            this.bus,
+          );
+          this.loop = new GameLoop(
+            (n) => this._tick(n),
+            (n, dt) => this._render(n, dt),
+          );
+
+          this._bind();
+        }
+
+        _bind() {
+          this.bus.on("input:hover", (data) => {
+            this.hovered = data;
+          });
+          this.bus.on("input:hoverEnd", () => {
+            this.hovered = null;
+          });
+          this.bus.on("input:click", (data) => {
+            console.log("TILE", data);
+            const key = `${data.gx},${data.gy}`;
+            if (this.clickedTiles.has(key)) {
+              this.clickedTiles.delete(key);
+            } else {
+              this.clickedTiles.add(key);
+            }
+          });
+        }
+
+        start() {
+          this.loop.start();
+        }
+
+        _tick() {
+          this.bus.emit("tick", {});
+        }
+
+        _render(now, dt) {
+          this.renderer.clear();
+          this.renderer.renderGrid(this.camera, this.hovered);
+        }
+      }
+
+      // Start the game
+      const game = new Game();
+      game.start();
+    </script>
+  </body>
+</html>
