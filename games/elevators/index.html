@@ -15,7 +15,7 @@
       body,
       html {
         overflow: hidden;
-        background: #0f172a;
+        background: #130c1f;
         font-family: "Courier New", monospace;
       }
 
@@ -23,7 +23,6 @@
         display: block;
       }
 
-      /* ── HUD ─────────────────────────────────────────────────────── */
       #hud {
         position: fixed;
         top: 0;
@@ -405,7 +404,7 @@
           this.building = building;
           this.colors = {
             roof: "#292d32",
-            floorLine: "#475569",
+            floorLine: "#292d32",
             building: "#131824",
             shaft: "#06101d",
             elevator: "#333333",
@@ -432,22 +431,47 @@
 
           ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+          const buildingHorizontalPadding = Math.min(canvas.width * 0.1, 50);
+          const buildingWallWidth = roofLineHeight;
+          const buildingWidth =
+            canvas.width -
+            buildingHorizontalPadding * 2 -
+            buildingWallWidth * 2;
+          const buildingLeftX = buildingHorizontalPadding + buildingWallWidth;
           const buildingHeight =
-            building.floors.length * (building.floorHeight + floorLineHeight);
+            building.floors.length * (building.floorHeight + floorLineHeight) +
+            roofLineHeight;
           const buildingHeightY = canvas.height - buildingHeight;
 
+          const elevatorLeftPadding = cabWidth;
           // ── Camera transform ─────────────────────────────────────────
           // scrollY > 0 means we've scrolled UP to see higher floors.
-          // translate(0, -scrollY) shifts canvas content upward, revealing higher floors.
+          // translate(0, scrollY) shifts canvas content upward, revealing higher floors.
           ctx.save();
           ctx.translate(0, engine.camera.scrollY);
 
+          // WALLS
+          ctx.fillStyle = colors.roof;
+          ctx.fillRect(
+            buildingHorizontalPadding,
+            buildingHeightY,
+            buildingWidth + buildingWallWidth * 2,
+            buildingHeight,
+          );
+
+          // BUILDING BACKGROUND
           ctx.fillStyle = colors.building;
-          ctx.fillRect(0, buildingHeightY, canvas.width, buildingHeight);
+          ctx.fillRect(
+            buildingLeftX,
+            buildingHeightY,
+            buildingWidth,
+            buildingHeight,
+          );
 
           // ── ELEVATORS ───────────────────────────────────────────────
           building.elevators.forEach((el, i) => {
-            const elevatorMiddle = i * 70 + 70;
+            const elevatorMiddle =
+              buildingLeftX + elevatorLeftPadding + cabWidth + i * 70;
             const floorLineY =
               canvas.height -
               el.currentFloorPos * (building.floorHeight + floorLineHeight) -
@@ -565,14 +589,18 @@
 
             // Floor line
             ctx.fillStyle = colors.floorLine;
-            ctx.fillRect(0, floorLineY, canvas.width, floorLineHeight);
+            ctx.fillRect(
+              buildingLeftX,
+              floorLineY,
+              buildingWidth,
+              floorLineHeight,
+            );
 
             // Roof line (topmost floor)
             if (floorIndex === building.floors.length - 1) {
-              const roofY =
-                floorLineY - building.floorHeight - roofLineHeight / 2;
+              const roofY = floorLineY - building.floorHeight - roofLineHeight;
               ctx.fillStyle = colors.roof;
-              ctx.fillRect(0, roofY, canvas.width, roofLineHeight);
+              ctx.fillRect(buildingLeftX, roofY, buildingWidth, roofLineHeight);
             }
 
             // Floor label
@@ -580,7 +608,7 @@
             ctx.textAlign = "left";
             ctx.fillStyle = colors.text;
             ctx.font = "11px Courier New";
-            ctx.fillText(`FL ${floor.index}`, 10, midY);
+            ctx.fillText(`FL ${floor.index}`, buildingLeftX + 10, midY);
 
             // Capacity indicator (residential floors only)
             if (floor.capacity > 0) {
@@ -589,7 +617,10 @@
               ctx.textAlign = "right";
               ctx.fillText(
                 `${floor.residents}/${floor.capacity}`,
-                canvas.width - 10,
+                canvas.width -
+                  buildingHorizontalPadding -
+                  buildingWallWidth -
+                  4,
                 midY + 4,
               );
             }
@@ -653,8 +684,7 @@
           this.canvas = document.getElementById("gameCanvas");
           this.renderer = new Renderer(this.canvas, this.building);
 
-          this.credits = 10000;
-          this.lastTime = performance.now();
+          this.credits = 0;
 
           this.arrivalTimer = 0;
 
@@ -669,6 +699,8 @@
 
           // Money pop particles (screen-space)
           this.moneyPops = [];
+
+          this.lastTime = performance.now();
 
           this._initListeners();
           this._initShop();
@@ -705,7 +737,7 @@
                 this.config.roofLineHeight;
               const maxScroll = Math.max(
                 0,
-                buildingH - this.canvas.height + 120,
+                Math.floor(buildingH - this.canvas.height * 0.75),
               );
               this.camera.scrollY = Math.max(
                 0,
@@ -927,8 +959,7 @@
             case "ARRIVING": {
               const tf = this.building.floors[person.targetFloor];
               if (tf) tf.unreserve();
-              this.credits = Math.max(0, this.credits - 100);
-              this._spawnPop("-100 CR", 120, this.canvas.height / 2, "#ef4444");
+              this._handlePatienceBreakFine();
               break;
             }
             case "VISITING":
@@ -940,6 +971,11 @@
               person.handleUnsuccessfulDeparture();
               break;
           }
+        }
+
+        _handlePatienceBreakFine() {
+          // this.credits = Math.max(0, this.credits - 100);
+          // this._spawnPop("-100 CR", 120, this.canvas.height / 2, "#ef4444");
         }
 
         // ── MONTH / RENT CYCLE ───────────────────────────────────────
